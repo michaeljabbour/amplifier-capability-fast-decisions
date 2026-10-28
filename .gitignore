@@ -30,3 +30,5 @@ results/
 evals/swebench/tasks/
 evals/swebench/results/
 uv.lock
+
+_site/

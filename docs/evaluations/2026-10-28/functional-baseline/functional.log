@@ -1,0 +1,6 @@
+test_installed_deterministic_diagnosis_uses_explicit_isolated_inputs (__main__.Gate.test_installed_deterministic_diagnosis_uses_explicit_isolated_inputs) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.095s
+
+OK

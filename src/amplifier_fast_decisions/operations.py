@@ -215,7 +215,10 @@ def diagnose(*, events_dir: str | Path = DEFAULT_EVENTS, session_id: str | None 
     """
     report = measure(events_dir, session_id=session_id)
     try:
-        dist = metadata.distribution('amplifier-fast-decisions')
+        try:
+            dist = metadata.distribution('amplifier-smart-tool-fast-decisions')
+        except metadata.PackageNotFoundError:
+            dist = metadata.distribution('amplifier-fast-decisions')
         direct = json.loads(dist.read_text('direct_url.json') or '{}')
         installed = {'scope': 'invoking_python_environment', 'present': True, 'version': dist.version, 'commit': direct.get('vcs_info', {}).get('commit_id')}
     except (metadata.PackageNotFoundError, ValueError):

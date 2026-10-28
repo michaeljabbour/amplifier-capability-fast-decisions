@@ -1,5 +1,15 @@
 # Fast Decisions
 
+Measure small agent decisions and use a bounded fast path only where its outcome can be checked.
+
+## Consolidated capability
+
+Portable method: [skills/fast-decisions/SKILL.md](skills/fast-decisions/SKILL.md). Install with `python3 scripts/capability.py install --dest ~/.agents/skills`. See [consolidation and runtime boundaries](docs/CONSOLIDATION.md). The retained source guide below documents the optional original host integration and historical evidence; it is not a new outcome claim.
+
+## Retained source guide
+
+### Fast Decisions
+
 Fast Decisions makes Amplifier faster by asking one quick question at the start of every request: *is this easy
 or hard?* Easy requests go to a faster, cheaper model (Claude Sonnet 5). Hard ones, and all work inside large
 projects, stay on your usual model. The decision is made once per request, so the AI service's memory of the

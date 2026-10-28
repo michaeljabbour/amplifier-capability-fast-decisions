@@ -48,7 +48,7 @@ def agent_skill() -> str:
     return ('---\n' + f'name: {json.dumps(info["name"])}\n'
             + f'description: {json.dumps(info["description"])}\n---\n\n'
             + 'Install the CLI if needed:\n\n```bash\n'
-            + "uv tool install 'amplifier-fast-decisions[local] @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main'\n```\n\n"
+            + "uv tool install 'amplifier-smart-tool-fast-decisions[local] @ git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main'\n```\n\n"
             + f'Run `{info["name"]} --help` and follow its guidance. Confirm capability\n'
             + f'arguments with `{info["name"]} <capability> --help` before use.\n')
 
@@ -162,7 +162,10 @@ def skill(capability: str | None = None) -> str:
     name = info['name'] + (f'-{capability}' if capability else '')
     lines = [f'<skill_content name="{name}">', f'Skill directory: {Path(__file__).resolve().parent}']
     try:
-        urls = metadata.metadata('amplifier-fast-decisions').get_all('Project-URL') or []
+        try:
+            urls = metadata.metadata('amplifier-smart-tool-fast-decisions').get_all('Project-URL') or []
+        except metadata.PackageNotFoundError:
+            urls = metadata.metadata('amplifier-fast-decisions').get_all('Project-URL') or []
         repository = next((u.split(',', 1)[1].strip() for u in urls if u.lower().startswith('repository,')), None)
         if repository:
             lines.append(f'Repository: {repository}')

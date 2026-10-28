@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "amplifier-fast-decisions"
+name = "amplifier-smart-tool-fast-decisions"
 version = "0.1.0"
 description = "A Foundation-compatible hybrid decision orchestrator and local routing observatory"
 readme = "README.md"
@@ -35,10 +35,10 @@ amplifier = [
 test = ["pytest>=8", "pytest-asyncio>=0.23", "jsonschema>=4", "PyYAML>=6"]
 
 [project.urls]
-Homepage = "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions"
-Repository = "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions"
-Issues = "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/issues"
-Documentation = "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/main/docs/ARCHITECTURE.md"
+Homepage = "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions"
+Repository = "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions"
+Issues = "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/issues"
+Documentation = "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/blob/main/docs/ARCHITECTURE.md"
 
 [project.scripts]
 amplifier-fast-decisions = "amplifier_fast_decisions.smart_cli:main"

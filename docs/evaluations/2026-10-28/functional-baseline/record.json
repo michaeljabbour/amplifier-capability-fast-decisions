@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-28",
+  "status": "local-functional-baseline",
+  "source_commit": "a451fdd307a472102f325f110c9ac4d37efcc29a",
+  "python": "3.12.5",
+  "fixture_content": "fictional",
+  "model_calls": 0,
+  "notes": "1650 native tests passed, 70 skips before metadata rename; 18 Smart Tool regression checks passed after rename.",
+  "limitations": [
+    "No speed, quality or savings improvement is claimed by packaging or offline replay."
+  ],
+  "files": {
+    "native.log": "084e552da787c6be020703537d1a7b9df4e53f068931ebba4e8d3b3684bf808d",
+    "functional.log": "08d4854a53833104fcaae9c9364162ca66e22db822830d72ed58db94625b0f09"
+  }
+}

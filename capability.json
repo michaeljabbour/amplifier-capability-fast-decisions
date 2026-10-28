@@ -1,0 +1,82 @@
+{
+  "id": "fast-decisions",
+  "display_name": "Fast Decisions",
+  "kind": "smart-tool",
+  "promise": "Measure small agent decisions and use a bounded fast path only where its outcome can be checked.",
+  "audience": "Developers measuring agent cost, latency and bounded routing.",
+  "trigger": "Select a read/list candidate, diagnose routing, or compare observed execution.",
+  "skill_path": "skills/fast-decisions",
+  "modes": [
+    {
+      "name": "Inspect",
+      "when": "A router or model service may be misconfigured.",
+      "output": "Native manifest, diagnose and observed execution counts."
+    },
+    {
+      "name": "Select",
+      "when": "The caller supplies bounded eligible candidates.",
+      "output": "A native advisory choice or explicit abstention."
+    },
+    {
+      "name": "Compare",
+      "when": "Matched baseline/enabled records exist.",
+      "output": "Recomputable outcome, cost and latency differences."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Fictional worked example",
+      "brief": "A fictional task illustrating Fast Decisions.",
+      "before": "A router claims savings from a suggested cheaper choice.",
+      "after": "Matched receipts show which calls actually executed and whether the task passed.",
+      "why": "Advisory scores alone cannot establish execution or cost avoided.",
+      "fictional": true
+    }
+  ],
+  "boundaries": [
+    "No speed, quality or savings improvement is claimed by packaging or offline replay."
+  ],
+  "install_commands": [
+    "python3 scripts/capability.py install --dest ~/.agents/skills"
+  ],
+  "runtime_install_commands": [
+    "python3 -m pip install ."
+  ],
+  "verification": [
+    {
+      "name": "Functional acceptance",
+      "command": "python3 scripts/functional_gate.py",
+      "expected": "Supplied fictional tasks exercise actual mechanisms and failure boundaries.",
+      "status": "passed",
+      "evidence": "1650 native tests passed, 70 skips before metadata rename; 18 Smart Tool regression checks passed after rename."
+    },
+    {
+      "name": "Native host acceptance",
+      "command": "See retained source integration guide",
+      "expected": "Actual provider/host/desktop/daemon/runner acceptance for the selected adapter.",
+      "status": "not-run",
+      "evidence": "No live model, real desktop transaction, invitation, deployment or production data migration was performed by this functional baseline."
+    }
+  ],
+  "sources": [
+    {
+      "repo": "amplifier-bundle-fast-decisions",
+      "commit": "a451fdd307a472102f325f110c9ac4d37efcc29a",
+      "paths": [
+        "docs/GOAL.md",
+        "docs/AGENT-HANDOFF.md",
+        "docs/PRIVACY.md",
+        "docs/COMPATIBILITY.md",
+        "src"
+      ],
+      "license": "MIT",
+      "role": "Primary retained owner history, mechanisms and records; portable method consolidates the listed entry points."
+    }
+  ],
+  "consolidation": [
+    "One portable method entry with mode references; original native engines, agents and records retained as optional adapters."
+  ],
+  "docs": [
+    "docs/CONSOLIDATION.md"
+  ]
+}
