@@ -1,0 +1,59 @@
+\section{Telemetry shows that decisions are fast, not whether they are right}\label{sec:observatory}
+
+\emph{The question at this stage:} before building anything new, what could the bundle's own records tell us about
+whether its decisions help? The fast-decisions bundle records every decision it makes, privately and locally, so we
+read what was already there: \ObEvents\ events in \ObSessionFiles\ session files, recorded from \ObWeekStart\ to the
+\ObCutoff\ snapshot cutoff; \ObWeekEvents\ of them fall in the first week (\ObWeekStart\ to \ObWeekEnd). \ObProdSessions\ sessions were real work; \ObTestSessions\ were tests.
+
+\paragraph{Decisions are fast.} \Cref{fig:obslatency} puts the decision calls next to the thing they try to save.
+A local Qwen3 model proposed a file read in \ObQwenPfifty\,ms at the median; Jev judged a session's starting model in
+\ObJevPfifty\,ms (p95 \ObJevPninetyfive\,ms). A host model call took \ObHostPfifty\,s at the median and \ObHostPninetyfive\,s
+at p95. Speed is not the obstacle.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{obslegend}\par\smallskip
+\input{figures/fig-obs-latency.tex}
+\caption{A decision call is two orders of magnitude faster than a host model call. Latency of decision calls and of host model calls, measured by the bundle's recorder (log scale).}
+\label{fig:obslatency}
+\howtoread{Each row has a median bar and a 95th-percentile bar. The decision rows are two orders of magnitude
+shorter than a host model call; the p95 bars show the slow tail.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{mixlegend}\par\smallskip
+\input{figures/fig-obs-mix.tex}
+\caption{Most recorded events are bookkeeping; decision-bearing events are a thin slice. What the observatory store holds: the seven most common kinds of recorded event, as a share of all events.}
+\label{fig:obsmix}
+\howtoread{The longest bar, \ObMixTop, is \ObMixTopPct\,\% of everything recorded. Decision-bearing events are a thin
+slice. A store this dominated by bookkeeping can tell you that decisions happen, not whether they were right.}
+\end{figure}
+
+\paragraph{The 7.1\,\% that was not what it seemed.} The telemetry reported that the read-shortcut proposals agreed
+with the host's next action only \ObAllRate\,\% of the time (\ObAllMatch\ of \ObAllN). Taken at face value, that
+condemns the idea. Decomposed, it says little about the decision model:
+\begin{itemize}
+  \item \ObUnmatchN\ of the \ObAllN\ decisions followed a host call to a tool the proposal could not contain, so they
+    could never match. ``Agreement'' was partly a labelling artefact.
+  \item \ObDemoN\ were scored by a synthetic demo backend that always picks the first candidate.
+  \item Where a match was possible, the real local scorer agreed with the host \ObCandRate\,\% of the time
+    (\ObCandMatch\ of \ObCandN; 95\,\% CI \ObCandCI).
+\end{itemize}
+Agreement is still not correctness: the store keeps no state text, so whether a disagreement was a mistake cannot be
+judged from it.
+
+\paragraph{Claimed savings were estimates.} The bundle's own receipts claimed \$\ObKeepaliveUSD\ saved by keeping
+caches warm (\ObKeepaliveN\ production receipts) and showed per-step routing to Sonnet costing money (\$\ObCheaperUSD).
+The read shortcut ``would have'' avoided \ObClaimTurns\ host turns in \ObClaimDecisions\ decisions. None of these was
+measured as a saving; later measurement turned the per-step routing off. In production, the first start-tier decision
+of a session was most often the scope gate keeping the host (\ObStScope\ of \ObStTotal\ sessions,
+\ObStScopePct\,\%); Jev judged \ObStJevStrong\ sessions strong and \ObStJevCheap\ cheap.
+
+\begin{keyidea}
+Telemetry told us decisions are cheap and fast, and that the bundle's own savings claims were estimates. It could not
+tell us whether decisions were right or whether they saved money. That needed labelled cases and paired sessions.
+\end{keyidea}
+
+\paragraph{What this left open} Whether a decision is right needs a label that telemetry does not keep, so the next
+stage built labelled cases (\cref{sec:judges}).

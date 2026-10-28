@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from .backends import JevBackend, ScriptedBackend, UnavailableBackend
+from . import judge_backends
+from .backends import ClefBackend, JevBackend, ScriptedBackend, UnavailableBackend
 from .contracts import SERVICE_CAPABILITY, RUNTIME_CAPABILITY, EVENT_NAMES, Policy
 from .service import DecisionService
 from .shadow import ShadowJob, ShadowOutcome, ShadowWorker
@@ -94,6 +95,42 @@ def save_planner_state(
         tmp.write_text(payload, encoding="utf-8")
         os.replace(tmp, path)
     except OSError:
+        pass
+
+
+def _session_route_path(events_dir: str, session_id: str) -> Path:
+    safe_id = _PLANNER_STATE_ID_RE.sub("_", session_id)[:200] or "unknown"
+    return Path(events_dir).expanduser() / "session-route" / f"{safe_id}.json"
+
+
+def load_session_route(events_dir: str | None, session_id: str | None) -> dict[str, Any] | None:
+    """Best-effort load of the once-per-session routing decision
+    (``model_routing.decision_scope: session``), so a resumed session (a
+    fresh process) reuses it instead of re-deciding. Never raises; ``None``
+    when there is nothing valid on disk."""
+    if not events_dir or not session_id:
+        return None
+    try:
+        data = json.loads(_session_route_path(events_dir, session_id).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("schema") != "fd-session-route/1" or data.get("tier") not in ("cheap", "strong"):
+        return None
+    return data
+
+
+def save_session_route(events_dir: str | None, session_id: str | None, route: dict[str, Any]) -> None:
+    """Best-effort atomic write (tmp + ``os.replace``) of the session route
+    (no prompt text). Never raises."""
+    if not events_dir or not session_id:
+        return
+    try:
+        path = _session_route_path(events_dir, session_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}")
+        tmp.write_text(json.dumps(route), encoding="utf-8")
+        os.replace(tmp, path)
+    except (OSError, TypeError, ValueError):
         pass
 
 
@@ -312,15 +349,18 @@ class Runtime:
                 await asyncio.to_thread(self.recorder.close)
 
 
-def _build_backend(config: dict[str, Any], policy: Policy) -> Any:
+def build_backend(config: dict[str, Any], policy: Policy) -> Any:
     """The judge backend a module's config asks for. Raises ValueError on a bad config."""
     backend_name = config.get("backend") or _env_backend_default() or "jev"
     if backend_name == "none":  # readable alias: routing-only, no judge
         backend_name = "unavailable"
-    if backend_name not in {"jev", "unavailable", "deterministic", "ollama", "mlx", "hosted", "gateway", "laya", "anyjev"}:
-        raise ValueError(
-            "Backend must be jev, deterministic, ollama, mlx, hosted (alias gateway), laya, anyjev, or unavailable"
-        )
+    if judge_backends.spec(backend_name) is None:
+        raise ValueError(f"Backend must be one of {', '.join(judge_backends.names('runtime', aliases=True))}")
+    if backend_name in ("clef", "clef-flash"):
+        # Cloudflare Workers AI; credentials come from the environment only.
+        backend = ClefBackend(model=backend_name, timeout_ms=policy.timeout_ms,
+                              account_env=config.get("account_env"), api_key_env=config.get("key_env"))
+        return backend
     if backend_name == "jev":
         # jev_url / jev_url_env / jev_key_env point the Jev client at any
         # other Jev System One-compatible server; backend_label names it.
@@ -331,6 +371,7 @@ def _build_backend(config: dict[str, Any], policy: Policy) -> Any:
             base_url_env=config.get("jev_url_env"),
             api_key_env=config.get("jev_key_env"),
             label=config.get("backend_label"),
+            criteria_format=config.get("criteria_format", "object"),
         )
     elif backend_name == "anyjev":
         from .anyjev_backend import AnyJevBackend, DEFAULT_URL
@@ -392,6 +433,9 @@ def _build_backend(config: dict[str, Any], policy: Policy) -> Any:
     else:
         backend = UnavailableBackend()
     return backend
+
+
+_build_backend = build_backend  # historical private name, still used inside this module
 
 
 def get_runtime(coordinator: Any, config: dict[str, Any], *, owner: bool = False) -> tuple[Runtime, bool]:

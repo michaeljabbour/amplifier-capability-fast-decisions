@@ -9,6 +9,7 @@ batching, not proof of shared GPU work, lower latency, or answer invariance.
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 import http.client
 import json
 import os
@@ -131,10 +132,26 @@ def _question_payload(question) -> dict[str, Any]:
     return payload
 
 
-def _build_questions(request: DecisionRequest) -> tuple[dict[str, Any], str]:
+CRITERIA_FORMATS = ("object", "string")
+# The message an object-criteria-intolerant System One server (Ollama's
+# /v1/systemone) answers with on HTTP 400.
+_CRITERIA_REJECTED = "choice criteria must map option keys to descriptions or null"
+
+
+class _CriteriaRejected(BackendUnavailable):
+    """HTTP 400 saying choice criteria values must be strings, not objects."""
+
+
+def _build_questions(request: DecisionRequest,
+                     criteria_format: str = "object") -> tuple[dict[str, Any], str]:
     """Shared question/criteria assembly for both the SDK and stdlib
     transports -- one place builds the batched payload, so the two paths
-    can never silently diverge in what they ask."""
+    can never silently diverge in what they ask.
+
+    ``criteria_format="string"`` renders each candidate as
+    ``"<action>: <purpose>"`` for servers that reject object values. The
+    option-set hash is always taken from the object form, so the same
+    candidates hash the same whichever wire format was used."""
     criteria = {
         c.id: {"action": c.label, "purpose": c.rationale, "tool": c.tool}
         for c in request.candidates
@@ -150,11 +167,19 @@ def _build_questions(request: DecisionRequest) -> tuple[dict[str, Any], str]:
             "criteria": criteria,
         }
     }
+    option_set_hash = digest({"format": "jev-options-v1", "options": list(criteria.items())})
+    if criteria_format == "string":
+        questions["next_action"]["criteria"] = {
+            key: f"{value['action']}: {value['purpose']}" if isinstance(value, dict) else value
+            for key, value in criteria.items()
+        }
     for question in request.questions:
         questions[question.name] = _question_payload(question)
-
-    option_set_hash = digest({"format": "jev-options-v1", "options": list(criteria.items())})
     return questions, option_set_hash
+
+
+def _with_criteria_format(result: DecisionResult, fmt: str) -> DecisionResult:
+    return replace(result, action=replace(result.action, criteria_format=fmt))
 
 
 def _decision_from_answer(answer: Any, model: str, input_tokens: Any,
@@ -252,7 +277,14 @@ class JevBackend:
         base_url_env: str | None = None,
         api_key_env: str | None = None,
         label: str | None = None,
+        criteria_format: str = "object",
     ):
+        if criteria_format not in CRITERIA_FORMATS:
+            raise ValueError(f"criteria_format must be one of {CRITERIA_FORMATS}")
+        # "object" (hosted Jev) or "string" (servers such as Ollama's
+        # /v1/systemone). An object-format backend switches itself to
+        # "string" for good after the first HTTP 400 that rejects objects.
+        self.criteria_format = criteria_format
         self.model = model or os.getenv("TYPESAFE_DEFAULT_MODEL") or DEFAULT_JEV_MODEL
         self.timeout_ms = timeout_ms
         self._client = client
@@ -298,6 +330,14 @@ class JevBackend:
         self._conn_target: tuple[bool, str, int] | None = None
         self._conn_lock = threading.Lock()
 
+    def _systemone_path(self) -> str:
+        """Request path under the base URL; a subclass for another System One host overrides it."""
+        return "/v1/systemone"
+
+    def _unwrap(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Hook for hosts that wrap the System One body (see ``ClefBackend``); identity for Jev."""
+        return payload
+
     def _base_url(self) -> str:
         if self.base_url:
             return self.base_url
@@ -335,11 +375,12 @@ class JevBackend:
         return await self._ask_urllib(request)
 
     async def _ask_sdk(self, request: DecisionRequest) -> DecisionResult:
-        questions, option_set_hash = _build_questions(request)
         # Captured before ``_get_client()`` may construct-and-cache a new
         # client, so this reflects whether *this* call reused an
         # already-authenticated, already-constructed client instance.
         had_client = self._client is not None
+        sent_format = self.criteria_format
+        questions, option_set_hash = _build_questions(request, sent_format)
         result = await self._get_client().system_one(
             state=request.state,
             questions=questions,
@@ -356,7 +397,8 @@ class JevBackend:
         # docs/MODEL-SETUP.md for what is and is not verified here.
         self.last_connect_ms = None
         self.last_vendor_confidence = _vendor_confidence(result)
-        return _result_from_payload(result, self.model, request, option_set_hash)
+        return _with_criteria_format(
+            _result_from_payload(result, self.model, request, option_set_hash), sent_format)
 
     async def _ask_urllib(self, request: DecisionRequest) -> DecisionResult:
         """No-install fallback: a plain ``http.client`` POST over a
@@ -368,30 +410,38 @@ class JevBackend:
         api_key = os.getenv(self.api_key_env)
         if not api_key:
             raise BackendUnavailable(f"{self.api_key_env} is missing")
-        questions, option_set_hash = _build_questions(request)
         model = self.model or DEFAULT_JEV_MODEL
-        body = {
-            "state": request.state,
-            "model": model,
-            "questions": questions,
-        }
         base_url = self._base_url()
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         timeout_s = self.timeout_ms / 1000
-        payload = await asyncio.to_thread(
-            self._post_keepalive,
-            base_url,
-            "/v1/systemone",
-            headers,
-            json.dumps(body).encode("utf-8"),
-            timeout_s,
-        )
+
+        async def post(fmt: str) -> tuple[dict[str, Any], str]:
+            questions, option_set_hash = _build_questions(request, fmt)
+            body = {"state": request.state, "model": model, "questions": questions}
+            payload = await asyncio.to_thread(
+                self._post_keepalive, base_url, self._systemone_path(), headers,
+                json.dumps(body).encode("utf-8"), timeout_s,
+            )
+            return self._unwrap(payload), option_set_hash
+
+        # The format THIS request was sent with, captured before the await: a
+        # concurrent request may flip self.criteria_format while we wait.
+        sent_format = self.criteria_format
+        try:
+            payload, option_set_hash = await post(sent_format)
+        except _CriteriaRejected:
+            if sent_format == "string":
+                raise
+            # Retry once with string criteria and remember it for this backend.
+            self.criteria_format = sent_format = "string"
+            payload, option_set_hash = await post("string")
         self.last_transport = "urllib"
         self.last_vendor_confidence = _vendor_confidence(payload)
-        return _result_from_payload(payload, model, request, option_set_hash)
+        return _with_criteria_format(
+            _result_from_payload(payload, model, request, option_set_hash), sent_format)
 
     def _new_connection(
         self, is_https: bool, host: str, port: int, timeout_s: float
@@ -417,6 +467,8 @@ class JevBackend:
         raw = response.read()  # always drain, so the connection stays reusable
         if response.status in (401, 403):
             raise BackendUnavailable("typesafe authentication failed")
+        if response.status == 400 and _CRITERIA_REJECTED.encode() in raw:
+            raise _CriteriaRejected("typesafe request failed: HTTP 400 (object criteria rejected)")
         if response.status >= 400:
             raise BackendUnavailable(f"typesafe request failed: HTTP {response.status}")
         try:
@@ -547,6 +599,69 @@ class JevBackend:
             self._client = None
         with self._conn_lock:
             self._close_connection_locked()
+
+
+WORKERS_AI_API = "https://api.cloudflare.com/client/v4"
+WORKERS_AI_MODELS: dict[str, str] = {"clef": "@cf/cloudflare/clef", "clef-flash": "@cf/cloudflare/clef-flash"}
+WORKERS_AI_TOKEN_ENV = "CLOUDFLARE_API_TOKEN"
+WORKERS_AI_ACCOUNT_ENV = "CLOUDFLARE_ACCOUNT_ID"
+
+
+def unwrap_workers_ai(payload: Any) -> dict[str, Any]:
+    """Workers AI wraps a System One body as ``{"result": {...}, "success": bool, "errors": [...]}``.
+
+    Returns the inner body. ``success: false`` or a non-empty ``errors`` list raises ``BackendUnavailable`` with
+    the error codes only (never the request). A body without the envelope passes through unchanged."""
+    if not isinstance(payload, dict) or not ("success" in payload or "errors" in payload):
+        return payload
+    errors = payload.get("errors") or []
+    if payload.get("success") is False or errors:
+        codes = ", ".join(str(e.get("code")) for e in errors if isinstance(e, dict)) or "success=false"
+        raise BackendUnavailable(f"workers-ai request failed: {codes}")
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        raise BackendUnavailable("workers-ai response had no result")
+    return result
+
+
+class ClefBackend(JevBackend):
+    """Cloudflare Workers AI decision models (``clef``, ``clef-flash``): the System One body inside the
+    Workers AI envelope. Opt-in, external (state leaves the machine), gated by ``allow_external_state``.
+
+    Same request, parsing and consent behavior as ``JevBackend`` (it is the same protocol); only the endpoint
+    (``/accounts/{account}/ai/run/@cf/cloudflare/<model>``), the credential (``CLOUDFLARE_API_TOKEN`` and
+    ``CLOUDFLARE_ACCOUNT_ID`` from the environment, never stored) and the envelope differ. Always the stdlib
+    transport. No warmup (every call is billed)."""
+
+    external = True
+
+    def __init__(self, *, model: str = "clef", timeout_ms: int = 750, account_env: str | None = None,
+                 api_key_env: str | None = None, base_url: str | None = None, label: str | None = None,
+                 criteria_format: str = "object"):
+        if model not in WORKERS_AI_MODELS:
+            raise ValueError(f"Workers AI model must be one of {sorted(WORKERS_AI_MODELS)}")
+        super().__init__(model=model, timeout_ms=timeout_ms, base_url=base_url or WORKERS_AI_API,
+                         api_key_env=api_key_env or WORKERS_AI_TOKEN_ENV, label=label or model,
+                         criteria_format=criteria_format)
+        self.name = model
+        self.account_env = account_env or WORKERS_AI_ACCOUNT_ENV
+
+    def _systemone_path(self) -> str:
+        account = os.getenv(self.account_env)
+        if not account:
+            raise BackendUnavailable(f"{self.account_env} is missing")
+        if not account.replace("-", "").replace("_", "").isalnum():
+            raise BackendUnavailable(f"{self.account_env} is not a valid account id")
+        return f"/accounts/{account}/ai/run/{WORKERS_AI_MODELS[self.model]}"
+
+    def _unwrap(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return unwrap_workers_ai(payload)
+
+    async def ask(self, request: DecisionRequest) -> DecisionResult:
+        return await self._ask_urllib(request)
+
+    async def warmup(self) -> None:
+        return None
 
 
 class UnavailableBackend:

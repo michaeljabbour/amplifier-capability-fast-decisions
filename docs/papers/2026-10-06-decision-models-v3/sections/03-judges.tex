@@ -1,0 +1,72 @@
+\section{On labelled decisions Jev is the best value; on real reads no judge is safe}\label{sec:judges}
+
+\emph{The question at this stage:} telemetry could not say whether a decision was right, so: on cases where the right
+answer is known, which decision model is right most often, at what price and speed? To know whether a decision is
+right we need labelled cases. We built two benchmarks and graded every decision model
+under the gate the bundle ships: act only when the top probability is at least \MinP\ and leads the runner-up by at
+least \MinMargin, within \TimeoutS\,s; otherwise fall back to the host.
+
+\paragraph{Constructed cases.} \NumBase\ judges answered \DevN\ development cases (a screen) and \HoldN\ fresh holdout
+cases whose analysis was preregistered, \HoldReps\ times each: file reads, searches, selections and computer-use
+questions, including cases with side effects or prompt injections. Two blind reviewers checked the labels (Cohen's
+$\kappa = \KappaHoldAB$ with the final labels). On the holdout, Jev was right on \JevHoldAccK\ of \HoldN\ cases at
+\$\JevHoldCost\ per million decisions and a p95 of \JevHoldPninetyfive\,ms. GPT-6 Luna (\LunaHoldAccK) and GPT-6.1 Sol
+(\SolHoldAccK) were slightly more accurate, but neither difference survived the preregistered Holm correction
+(adjusted $p = \LunaHoldRAccPHolm$ and \SolHoldRAccPHolm), and both were slower and dearer (p95
+\LunaHoldPninetyfive\ and \SolHoldPninetyfive\,ms). Cloudflare's Clef, tested later and labelled post hoc, matched
+Jev's accuracy (\ClHoldClefAcc\ against an in-run Jev \ClHoldJevAcc) at \ClClefCostXLow--\ClClefCostXHigh\X\ the cost
+per decision and a p95 of \ClClefPninetyfiveLow--\ClClefPninetyfiveHigh\,ms from our machine.
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{phacclegend}\par\smallskip
+\input{figures/fig-ph-accuracy.tex}
+\caption{No accuracy difference between the top judges was detected after the preregistered correction. Holdout accuracy with 95\,\% Wilson intervals: the preregistered run, then (below the gap) the post-hoc run
+of Clef, Clef-Flash and the in-run Jev reference.}
+\label{fig:accuracy}
+\howtoread{Each row is a judge; the dot is its accuracy and the whisker its 95\,\% interval. The top judges'
+whiskers overlap: no accuracy difference was detected after the preregistered correction (which is not the same as
+showing the judges equivalent). Jev sits among them at a fraction of
+the cost and latency of the cloud models (companion report, Part I).}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\pgfplotslegendfromname{phcostlegend}\par\smallskip
+\input{figures/fig-ph-costacc.tex}
+\caption{Jev is the cheapest judge near the top of the measured accuracy range. Cost per million decisions (log scale) against holdout accuracy, for the judges that have a price.
+Blue: preregistered run; black pentagons: post-hoc run (Clef, Clef-Flash and the in-run Jev reference).}
+\label{fig:costacc}
+\howtoread{Left is cheaper, up is more accurate. Jev is the cheapest point near the top; the cloud models buy a few
+points of measured accuracy, a difference not detected after correction, for many times the price.}
+\end{figure}
+
+\paragraph{Real decisions.} Constructed cases can be easier or harder than real ones. A second preregistered study
+rebuilt \TrN\ real read-shortcut decisions from earlier sessions, exactly as the in-session judge had seen them.
+Reviewers agreed with each other ($\kappa = \TrKappaAB$) much more than with what the host actually did next
+($\kappa = \TrKappaOutcome$). The preregistered usefulness rule asked for at least \TrUsefulMinReads\ correct
+automatic reads with few misfires. \TrNUseful\ of \NumBase\ judges met it (\cref{fig:reads}). Jev took the most
+correct reads (\TrJevReads\ of \TrReadCases) but also made \TrJevWaK\ wrong automatic reads.
+
+\begin{figure}[htbp]
+\centering
+\begin{adjustbox}{max width=\linewidth}\input{figures/fig-ph-reads.tex}\end{adjustbox}
+\caption{On real read decisions, no judge reached the usefulness zone. Real decisions: correct automatic reads against wrong automatic reads on trace-holdout, with 95\,\% Wilson
+intervals: the preregistered run, plus the post-hoc Clef arms (black pentagons). The shaded strip is where the
+preregistered rule would call a judge useful.}
+\label{fig:reads}
+\howtoread{Right is more saved host calls; up is more misfires. No judge reaches the shaded strip: every judge with
+enough correct reads also misfired.}
+\end{figure}
+
+\input{generated/openai-section.tex}
+
+\begin{keyidea}
+Jev is the best value among the decision models we tested: no accuracy difference from the expensive ones was
+detected after the preregistered correction, and it is much cheaper and faster. But on real read decisions no model was safe enough to act on its own, so the read shortcut stays
+off. The money, if any, had to come from a bigger decision: which model runs the session.
+\end{keyidea}
+
+\paragraph{What this left open} A judge can be accurate and still save nothing. The only decision left that clearly
+moves money is which model runs the whole session, and that can only be measured in whole sessions
+(\cref{sec:paired}).

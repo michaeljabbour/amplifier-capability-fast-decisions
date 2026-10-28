@@ -61,6 +61,9 @@ EVENT_NAMES = tuple(
         # Turn-start difficulty router (model_routing.start_policy): which
         # tier the turn starts on, who decided, with what probability.
         "difficulty_judged",
+        # Once-per-session routing receipt: scope, decision, price-gate inputs
+        # and predicted ratio, judge answer. See price_gate.py, docs/EVENTS.md.
+        "session_routed",
         "judge_usage",
         # Efficiency receipts (docs/GOAL.md): one per optimization decision,
         # with the baseline and the savings fixed at decision time.
@@ -139,6 +142,9 @@ def validate_effort_routing(effort_routing: Any) -> None:
         # never invalidated by an effort change. None = provider default;
         # "phase" = this tier uses the phase map (with ``monotonic`` if set).
         "by_tier",
+        # Per-host override of by_tier: {host_model_id_prefix: {cheap|strong: effort|null}}. The longest matching
+        # prefix of the host model id replaces those tiers; other hosts keep by_tier.
+        "by_host",
     }
     if unknown:
         raise ValueError(f"effort_routing has unknown keys: {sorted(unknown)}")
@@ -149,6 +155,16 @@ def validate_effort_routing(effort_routing: Any) -> None:
         for tier_effort in by_tier.values():
             if tier_effort is not None and tier_effort != "phase" and tier_effort not in ALLOWED_EFFORTS:
                 raise ValueError(f"effort_routing.by_tier values must be one of {sorted(ALLOWED_EFFORTS)}, 'phase' or null")
+    by_host = effort_routing.get("by_host")
+    if by_host is not None:
+        if not isinstance(by_host, dict) or not all(isinstance(k, str) and k for k in by_host):
+            raise ValueError("effort_routing.by_host must map host model ids to cheap/strong effort maps")
+        for host, tiers in by_host.items():
+            if not isinstance(tiers, dict) or not tiers or set(tiers) - {"cheap", "strong"}:
+                raise ValueError(f"effort_routing.by_host[{host!r}] must map cheap/strong to an effort or null")
+            for tier_effort in tiers.values():
+                if tier_effort is not None and tier_effort not in ALLOWED_EFFORTS:
+                    raise ValueError(f"effort_routing.by_host values must be one of {sorted(ALLOWED_EFFORTS)} or null")
     for key in ("max_explore_requests", "escalate_after_provider_errors"):
         value = effort_routing.get(key)
         if value is not None and (
@@ -166,6 +182,9 @@ def validate_effort_routing(effort_routing: Any) -> None:
 # HC04 ("opt-in model routing with escalation"): the effort strings a host
 # provider accepts on Policy.model_routing["start_effort"]. Reuses
 # ALLOWED_EFFORTS above -- same vocabulary as effort_routing.
+DECISION_SCOPES = frozenset({"turn", "session"})
+TASK_TYPES = ("bugfix", "feature", "docs", "explain", "review", "other")
+KEEP_ON_HOST_KEYS = frozenset({"task_types"})
 MODEL_ROUTING_KEYS = frozenset(
     {
         "start_model",
@@ -201,6 +220,13 @@ MODEL_ROUTING_KEYS = frozenset(
         # no start_model override and no mid-turn escalation (a mid-turn
         # model switch re-writes the whole prompt cache).
         "start_policy",
+        # When the start tier is decided: "turn" (library default, legacy) or
+        # "session" (once, persisted; shipped default). See docs/CONFIGURATION.md.
+        "decision_scope",
+        # Route only when the cheap model is predicted cheaper on this host
+        # (price_gate.py); None = off. Opt-in task-type opt-out (keep_on_host).
+        "price_gate",
+        "keep_on_host",
         "complex_min_probability",
         "complex_min_prompt_chars",
         # Scope gate: a workspace with more files than this is a repository-
@@ -486,6 +512,26 @@ def validate_model_routing(model_routing: Any) -> None:
     start_policy = model_routing.get("start_policy")
     if start_policy is not None and start_policy not in ("cheap", "rules", "judge"):
         raise ValueError("model_routing.start_policy must be cheap, rules or judge")
+    scope = model_routing.get("decision_scope")
+    if scope is not None and scope not in DECISION_SCOPES:
+        raise ValueError("model_routing.decision_scope must be turn or session")
+    if scope == "session" and effective_planner_config(model_routing) is not None:
+        raise ValueError("model_routing.decision_scope: session conflicts with planner "
+                         "(the turn planner chooses per turn; use decision_scope: turn)")
+    if model_routing.get("price_gate") is not None:
+        from . import price_gate as _price_gate  # lazy, as validate_levers is
+
+        _price_gate.validate(model_routing["price_gate"])
+    keep_on_host = model_routing.get("keep_on_host")
+    if keep_on_host is not None:
+        if not isinstance(keep_on_host, dict) or set(keep_on_host) - KEEP_ON_HOST_KEYS:
+            raise ValueError("model_routing.keep_on_host must be a dict with only task_types")
+        task_types = keep_on_host.get("task_types")
+        if (not isinstance(task_types, (list, tuple)) or not task_types
+                or any(t not in TASK_TYPES for t in task_types) or len(set(task_types)) != len(task_types)):
+            raise ValueError(f"model_routing.keep_on_host.task_types must be a non-empty list of unique values from {list(TASK_TYPES)}")
+        if start_policy not in ("judge", "rules"):
+            raise ValueError("model_routing.keep_on_host requires start_policy: judge or rules")
     cmp_ = model_routing.get("complex_min_probability")
     if cmp_ is not None and (isinstance(cmp_, bool) or not isinstance(cmp_, (int, float)) or not 0 < cmp_ < 1):
         raise ValueError("model_routing.complex_min_probability must be in (0, 1)")
@@ -829,6 +875,10 @@ class Decision:
     probability_kind: str = "backend_reported"
     confidence_kind: str = "unspecified"
     option_set_hash: str | None = None
+    # Wire format of choice criteria actually sent ("object"/"string"); None when
+    # the backend has no such choice. Recorded so accuracy is not silently
+    # confounded across backends/formats.
+    criteria_format: str | None = None
 
     def validate(self, choices: set[str]) -> None:
         if self.choice not in choices or set(self.probabilities) != choices:
@@ -948,6 +998,8 @@ class Policy:
     max_candidates: int = 12
     max_questions: int = 8
     max_state_chars: int = 12000
+    # Most characters of the task message kept in the state (head + tail when longer).
+    max_task_chars: int = 2000
     allow_external_state: bool = False
     allow_synthetic_active: bool = False
     allowed_tools: tuple[str, ...] = ("fast_workspace",)
@@ -1049,6 +1101,8 @@ class Policy:
             raise ValueError("max_questions must be between 0 and 64")
         if not 512 <= self.max_state_chars <= 100000:
             raise ValueError("max_state_chars must be between 512 and 100000")
+        if not 256 <= self.max_task_chars <= 100000:
+            raise ValueError("max_task_chars must be between 256 and 100000")
         if not 1 <= self.shadow_max_messages <= 200:
             raise ValueError("shadow_max_messages must be between 1 and 200")
         if not 1 <= self.shadow_snapshot_budget_ms <= 5000:
@@ -1191,6 +1245,11 @@ class TurnState:
     # Turn-start difficulty router: "cheap" | "strong", decided once at the
     # turn's first slow request (None until then / when routing is off).
     start_tier: str | None = None
+    # Why/how the start tier was decided (read by the session_routed receipt).
+    start_reason: str | None = None
+    start_probabilities: dict | None = None
+    task_type: str | None = None
+    start_scope_files: int | None = None
     # Who decided the start tier (e.g. "jev:task_difficulty", "rule:scope_gate")
     # and how long the judge took, for efficiency receipts.
     start_mechanism: str | None = None

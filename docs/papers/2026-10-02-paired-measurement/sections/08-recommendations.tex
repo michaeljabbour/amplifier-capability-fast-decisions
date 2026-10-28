@@ -1,0 +1,105 @@
+\section{What it means}\label{sec:recs}
+
+\begin{keyidea}
+\textbf{Fable~5.1 at the \cref{tab:prices} prices: move the session to Sonnet, and decide once.} On Fable 5.1
+at the Table~\ref{tab:prices} prices, sticky routing saved about \CfFableStickySaving\,\% (typical per-session saving: geometric mean of
+per-pair cost ratios; actual spend fell \RvSpendCutAll\,\% over all \NScenarios\ scenarios, from \$\RvSpendAnchor\ to
+\$\RvSpendSticky\ per session, and \RvSpendCutTest\,\% on the test split), with turn-pass
+fraction inside the preregistered \NIMarginPts-point margin on the \NTest\ test scenarios. Across all
+\QAllScen\ scenarios that margin was not shown for sticky (\QAllFableSticky, CI \QAllFableStickyCI), and
+routed Fable arms passed the final hidden tests \FinalGapLow--\FinalGapHigh\ points less often
+(exploratory). The sticky policy cost less than the shipped one (\HThreeFable\X\ on Fable, \HThreeOpus\X\ on
+Opus); the preregistered test was only that sticky costs no more than shipped. At these prices the saving is
+Sonnet-at-medium relative to the host at its default effort. Lowering the host's own effort to medium is a smaller
+saving (about \EfCutPct\,\%, \EfRatio\X) with no detectable quality loss (\cref{sec:effortfable}); routing to Sonnet
+once per session remains the larger saving, but lowering the host's effort avoids the task-type quality losses seen
+with routing, which makes it a reasonable choice where explain, review or feature quality matters. Opus's response to
+effort was not measured.
+\end{keyidea}
+
+\paragraph{How much of the saving is the router, and how much the effort setting.} An earlier draft read the data
+as supporting ``use Sonnet'' as much as ``use the router''. That reading is withdrawn. When the sticky router chose
+Sonnet it ran every main request at medium reasoning effort, while the plain-Sonnet control used the provider
+default; those sticky sessions cost \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the control on the same
+scenarios, with no detectable quality difference (\cref{sec:effort}). So part of the routing saving is the effort
+setting, which a ``just use Sonnet'' deployment would also get if it set the same effort. On Fable the near-equality
+of sticky (\CfFableStickyPair\X) and plain Sonnet (\CfFableSonnetPair\X) is two effects cancelling: medium-effort
+Sonnet is cheaper than the control, while the \RvStickyHostNFable\ sticky sessions that kept the host cost
+\RvStickyHostFable\X\ the plain host. The per-1,000 figures (\$\SavFableSticky\ for sticky, \$\SavFableSonnet\ for
+Sonnet) are mean-difference (spend) measures. The judge's own calls are not in the session costs
+(\cref{sec:design}); by an estimate from another study they would add about \JudgeShippedCents\ cents per shipped
+session, which does not change these conclusions. Then a follow-up designed in advance (its plan was committed \EcFirstAfter\ before its first analysed session;
+\cref{sec:effortfollow}) showed that medium effort alone makes plain Sonnet cost \EcRatio\X\ the default (95\,\% CI \EcCI),
+run concurrently on the \EcScen\ test scenarios. So the effort setting alone explains most of the
+sticky-versus-plain-Sonnet gap; read the other way round, sticky-on-Sonnet cost about \EcSecGapPct\,\% more than medium
+plain Sonnet (\EcSecRatio; exploratory and not concurrent), within what bundle behaviour or timing could produce. The
+practical reading: on Fable~5.1 at the \cref{tab:prices} prices, the saving comes from running the session on Sonnet at
+medium effort. On the Sonnet sessions the router's extra machinery did not help: sticky-on-Sonnet cost about \EcSecGapPct\,\% more
+than plain Sonnet at medium effort (\EcSecRatio\ the other way round; exploratory, not concurrent), and the
+\RvStickyHostNFable\ sessions per host that kept the host cost \RvStickyHostFableTwo\X\ (Fable) and
+\RvStickyHostOpusTwo\X\ (Opus) the plain host. This campaign shows no benefit of this router beyond the decision to use
+Sonnet. Anyone already running plain Sonnet can take the effort result on its own: medium effort cut
+cost by about \EcCutPct\,\% with no detectable turn-pass loss on these \EcScen\ scenarios (\RvDocsTest\ docs, \RvExplainTest\ explain, \RvReviewTest\ review); the main campaign
+hints at a loss on docs, explain and review work (sticky-on-Sonnet at medium minus the default-effort control:
+\RvKTDtp\ [\RvKTDtpCI] on those \RvKTN\ scenarios against \RvRestDtp\ [\RvRestDtpCI] on the rest; post hoc, and
+confounded with the bundle's context) that the follow-up is too small to settle.
+
+\begin{keyidea}
+\textbf{Opus~5.5 at the \cref{tab:prices} prices: do not route to Sonnet.} Opus's cache reads are cheaper than
+Sonnet's, and Sonnet needed more requests for the same scripted work, so every routing arm cost more:
+\CfOpusStickyExtra--\CfOpusSonnetExtra\,\% more in the pair reading and
+\CfOpusStickyArmExtra--\CfOpusSonnetArmExtra\,\% in the arm reading. The plain host is the right default
+\emph{at these prices}. If Opus cache reads cost about \$\BEStickyPair\ rather than \$\PriceOpusRead\ per
+million tokens, sticky routing would roughly break even (\cref{sec:breakeven}). The Opus result does not depend on
+the effort setting: sticky sessions that ran Sonnet at medium effort still cost \RvEffVsAnchorOpusTwo\X\ (95\,\% CI
+\RvEffVsAnchorOpusCI) the plain Opus host.
+\end{keyidea}
+
+\paragraph{Quality by task type.} The aggregate Fable sticky quality hides a split (\cref{tab:taskfable}):
+\RgNTaskFail\ of \RgNTask\ task types fall below the \NIMarginPts-point margin (\RgTaskFailList), \RgNTaskThreeX\
+of them by about three times, and they are among the largest savers. The aggregate passes because bugfix and
+mixed scenarios are numerous. Routing only the task types that hold their quality could avoid most of the loss;
+that is a hypothesis for the next campaign, not a finding.
+
+\paragraph{The judge.} Keep Jev as the default judge. The post-hoc Cloudflare Clef judge matched its accuracy but
+was \ClClefCostXLow--\ClClefCostXHigh\X\ the cost per decision and about three times slower from this machine; it is
+worth re-testing if it can be hosted close to the agent or if its measured latency improves. Clef-Flash was cheaper
+but less accurate (\cref{sec:clef}). Neither was part of the paired campaign. Taken together, the evidence does not
+establish the value of the decision-judge machinery itself: no judge met the usefulness rule on real decisions
+(\cref{sec:traces}), and the router showed no benefit beyond the decision to use Sonnet (\cref{sec:effort}). Jev
+remains the best of the judges tested.
+
+\paragraph{Caching guidance (hypotheses).} The mechanisms in \cref{sec:caching,sec:composition} suggest the
+following for other hosts and prices. They are hypotheses drawn from two hosts on one provider, not tested
+findings:
+\begin{itemize}
+  \item \textbf{Compare price per token class, not price per token.} A model that is cheaper on input and
+    output may be dearer in a long conversation if its cache reads cost more.
+  \item \textbf{Every switch re-writes the history.} Switching less often, ideally once at the start, should
+    avoid most rebuild cost.
+  \item \textbf{Count requests, not just tokens.} The cheaper model made more requests for the same scripted
+    work here; that volume, not only the price, decided the Opus result.
+  \item \textbf{Pauses matter.} An idle gap longer than the cache lifetime makes the next request pay to
+    write the history again, on any model.
+  \item \textbf{Measure with isolation.} Give every measured session a private cache key (a nonce), and never
+    start two identical requests at the same instant.
+\end{itemize}
+
+\paragraph{How to use the numbers.} For a deployment that looks like this campaign, use the measured savings
+per 1,000 sessions in \cref{tab:per1000,tab:per1000full}. The savings model is suitable for a pooled
+forecast over a similar mix, with its interval; do not use its per-host or per-task figures
+(\cref{sec:modellimits}).
+
+\paragraph{What to measure next.}
+\begin{itemize}
+  \item \textbf{Longer sessions.} Real sessions often run for many dozens of turns; these ran at most
+    \MaxTurns.
+  \item \textbf{Real traffic.} Scripted users do not wait, wander or abandon sessions as people do.
+  \item \textbf{A production measure mode.} Routed and unrouted paths cannot both run in one live session,
+    but each production session can carry the model's prediction and interval, and sampled offline replays
+    can provide fresh paired measurements.
+  \item \textbf{Other hosts and providers.} The direction of the result depends on the price table; a new
+    host model needs its own measurement, or at least a check of its read and write prices against Sonnet's.
+  \item \textbf{The final-pass signal.} A larger sample would settle whether the small excess of final-test
+    losses on routed Fable arms is real (\cref{sec:finalpass}).
+\end{itemize}

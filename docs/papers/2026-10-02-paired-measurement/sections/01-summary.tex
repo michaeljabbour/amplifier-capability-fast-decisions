@@ -1,0 +1,87 @@
+\section{Summary}\label{sec:summary}
+
+A coding agent such as Amplifier runs on a \term{host model}: the large model that answers each turn of a
+conversation. The fast-decisions bundle can \term{route} some of the work to a cheaper model (here Sonnet 5)
+when it judges the work easy enough. Routing looks like an obvious saving. It is not obvious once a
+conversation gets long, because of \term{prompt caching}: the provider keeps a cheap-to-reuse copy of the
+conversation \emph{for each model separately}, so switching models means paying again to cache the whole
+history (\cref{sec:caching}).
+
+This report answers one question with measurements rather than estimates: \emph{what does routing an agent
+to a cheaper model actually cost, in money and in quality, over realistic multi-turn sessions?}
+
+\begin{keyidea}
+\textbf{What we found} (test split; hypotheses and thresholds preregistered, estimator fixed after the data;
+prices of \cref{tab:prices};
+\cref{sec:confirm}):
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Fable 5.1 host: Sonnet is cheaper.} Choosing the model once at the start of the session
+    (\term{sticky}) cost \CfFableStickyPairTwo\X\ the plain host (95\,\% CI \CfFableStickyPairCITwo), a
+    typical per-session saving of about \CfFableStickySaving\,\% (geometric mean of per-pair cost ratios). In
+    spend, the plain Fable sessions cost \$\RvSpendAnchor\ on average and sticky ones \$\RvSpendSticky, a
+    reduction of \RvSpendCutAll\,\% over all \NScenarios\ scenarios (\RvSpendCutTest\,\% on the test split).
+    Turn-pass fraction was inside the preregistered margin on the test scenarios only. The shipped router, which re-chooses its model at the start of each turn, cost
+    \CfFableShippedPairTwo\X; plain Sonnet for the whole session cost \CfFableSonnetPairTwo\X.
+  \item \textbf{Opus 5.5 host: routing to Sonnet cost more.} Sticky \CfOpusStickyPairTwo\X, shipped
+    \CfOpusShippedPairTwo\X, plain Sonnet \CfOpusSonnetPairTwo\X\ (pair reading); without the quality filter
+    (arm reading) \CfOpusStickyArmTwo\X, \CfOpusShippedArmTwo\X\ and \CfOpusSonnetArmTwo\X, that is
+    \CfOpusStickyArmExtra--\CfOpusSonnetArmExtra\,\% more. This depends on Opus's cache-read price: at about
+    \$\BEStickyPair\ per million tokens instead of \$\PriceOpusRead, sticky would break even
+    (\cref{sec:breakeven}).
+  \item \textbf{Sticky cost less than shipped on both hosts:} \HThreeFable\X\ on Fable and \HThreeOpus\X\ on
+    Opus. The preregistered test was only that sticky costs no more than shipped; on Fable the margin is small
+    (upper bound \HThreeFableUpper).
+  \item \textbf{The savings model passes a pooled check.} Fitted on \NTrain\ training scenarios, it
+    predicted the held-out total within its 90\,\% interval and its intervals covered the held-out pairs at
+    the preregistered rate. Its per-host and per-task figures are not reliable (\cref{sec:modellimits}).
+  \item \textbf{Cloudflare Clef (post-hoc) does not replace Jev.} Added after the preregistered results, Clef matched
+    Jev's accuracy on the judge splits but cost \ClClefCostXLow--\ClClefCostXHigh\X\ as much per decision with a p95 of
+    \ClClefPninetyfiveLow--\ClClefPninetyfiveHigh\,ms from this machine; Clef-Flash was cheaper but less accurate
+    (\cref{sec:clef}).
+\end{itemize}
+\end{keyidea}
+
+The preregistration fixed the four hypotheses, their thresholds, the split and the decision rule; the
+estimator, the quality filter and which cells count as savings claims were fixed after the data were collected
+(\cref{sec:design}). Under that estimator all \NHypConfirmed\ hypotheses were confirmed, under both readings of
+``non-inferior'' quality (\cref{sec:confirm}). Quality was tested only for cells whose cost interval shows a
+saving; Opus sticky, which saves nothing, did not show non-inferior quality (\QOpusSticky, 95\,\% CI
+\QOpusStickyCI). If every routed cell had to pass the quality test, \RvNHypAllQuality\ of 4 hypotheses would be
+confirmed. Three cautions travel with the result.
+\begin{itemize}
+  \item \textbf{Quality is close to the line.} Sticky on Fable passed the 5-point turn-pass margin on the test
+    scenarios by \QFableStickyMarginGap; across all \QAllScen\ scenarios the margin was not shown
+    (\QAllFableSticky, 95\,\% CI \QAllFableStickyCI), and routed Fable arms passed the final hidden tests
+    \FinalGapLow--\FinalGapHigh\ points less often (exploratory; \cref{sec:finalpass}).
+  \item \textbf{Part of the routing saving is an effort setting.} When the sticky router chose Sonnet it ran it at
+    medium reasoning effort, while the plain-Sonnet control used the provider default. Those sticky sessions cost
+    \RvEffFableAll\X\ (Fable) and \RvEffOpusAll\X\ (Opus) the control on the same scenarios (\cref{sec:effort}). Then
+    a follow-up designed in advance (its plan was committed \EcFirstAfter\ before its first analysed session;
+\cref{sec:effortfollow}) showed that medium effort alone makes plain Sonnet cost \EcRatio\X\ the default (95\,\% CI
+    \EcCI), with no detectable turn-pass loss: the saving on Fable comes from Sonnet at medium effort. Lowering Fable's own effort to medium saves less (\EfRatio\X;
+    \cref{sec:effortfable}) but showed no quality loss. On the Sonnet sessions the router's extra machinery did not help: sticky-on-Sonnet cost about \EcSecGapPct\,\% more
+than plain Sonnet at medium effort (\EcSecRatio\ the other way round; exploratory, not concurrent), and the
+\RvStickyHostNFable\ sessions per host that kept the host cost \RvStickyHostFableTwo\X\ (Fable) and
+\RvStickyHostOpusTwo\X\ (Opus) the plain host. This campaign shows no benefit of this router beyond the decision to use
+Sonnet.
+    An earlier draft's claim that the router adds little beyond ``use Sonnet'' is withdrawn.
+  \item \textbf{Scope.} Sessions are scripted, at most \MaxTurns\ turns long, on one provider and one price
+    table (\cref{sec:limits}).
+\end{itemize}
+
+\paragraph{How to read this report.} The report follows the whole study arc in four parts.
+\begin{itemize}
+  \item \textbf{Part~\ref{part:judges}, fast judges.} What a decision judge is, how \NumBase\ judges did on
+    constructed cases (\cref{sec:judges}) and on real decisions rebuilt from agent traces (\cref{sec:traces}),
+    and the four bundle defects those studies found and fixed.
+  \item \textbf{Part~\ref{part:caching}, what caching does to savings.} Why estimates were not enough
+    (\cref{sec:why}), what an earlier caching survey showed (\cref{sec:survey}), and how prompt caching works,
+    with a direct probe of the provider (\cref{sec:caching}).
+  \item \textbf{Part~\ref{part:measuring}, measuring savings.} How the design evolved and how big it had to be
+    (\cref{sec:design}), how it was run safely (\cref{sec:running}), the confirmatory results
+    (\cref{sec:confirm}) and the exploratory ones (\cref{sec:explore,sec:more}), labelled as such.
+  \item \textbf{Part~\ref{part:implications}.} Recommendations, limitations and how to reproduce every number
+    (\cref{sec:recs,sec:limits,sec:repro}). A glossary is in \cref{app:glossary}.
+\end{itemize}
+Results marked \prereg\ test hypotheses fixed in advance on held-out data; results marked \screen\ are exploratory.
+Every figure has a ``How to read this figure'' note.
