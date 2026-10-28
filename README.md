@@ -1,10 +1,53 @@
 # Fast Decisions
 
-Measure small agent decisions and use a bounded fast path only where its outcome can be checked.
+Find the agent decisions worth making cheaper.
 
-## Consolidated capability
+For developers tuning agent cost and latency. Inspect routing, try bounded advisory choices and compare recorded runs with task outcomes, so an attractive estimate can be checked against what actually executed.
 
-Portable method: [skills/fast-decisions/SKILL.md](skills/fast-decisions/SKILL.md). Install with `python3 scripts/capability.py install --dest ~/.agents/skills`. See [consolidation and runtime boundaries](docs/CONSOLIDATION.md). Native CLI/import identity stays `amplifier-fast-decisions` / `amplifier_fast_decisions`; the distribution and planned repository are `amplifier-smart-tool-fast-decisions`. The native guide below retains upstream routing and evidence; no inherited result is a new result of this consolidation.
+[Explore the site](https://michaeljabbour.github.io/amplifier-smart-tool-fast-decisions/)
+
+## What you get
+
+- **See the work behind the bill.** Inspect recorded decisions, model calls and receipts before choosing an optimization.
+- **Keep small choices bounded.** Offer eligible candidates and let the host validate the returned choice or accept an abstention.
+- **Measure the tradeoff.** Compare matched baseline and enabled runs, including quality, cache effects and cases that cost more.
+
+## Start here
+
+```sh
+git clone https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions.git
+cd amplifier-smart-tool-fast-decisions
+python3 scripts/capability.py install --dest ~/.agents/skills
+```
+
+This installs the portable method and its packaged references into your agent skill folder. If your host uses another folder, pass that path to `--dest`. Start a new session or use your host’s skill refresh so it can discover the installed skill. Optional native tools are installed separately.
+
+Try this first task:
+
+> Use Fast Decisions to inspect the installed CLI and run its deterministic doctor. Explain what is available without a scoring provider. Propose one bounded read/list choice and a matched comparison that would test whether it helps; do not enable a hook or start a model service.
+
+## What you need
+
+- Python 3.11 or later for the portable install helper.
+- The native command is amplifier-fast-decisions; the Python import is amplifier_fast_decisions.
+- Install the portable skill alone for guidance, or install the native package in a virtual environment for the CLI.
+- Deterministic inspection works without a model key. Optional Jev, Laya or local scoring needs its own setup and data-sharing decision.
+
+For the optional native interface, use a project virtual environment:
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install .
+```
+
+## Evidence and limits
+
+The reconciled native suite and clean-wheel deterministic rule decision passed. This release does not establish a speed, savings or quality improvement on another person’s workload.
+
+The worked examples on the site are fictional. They illustrate the output and decisions; they are not user results or measured benefit. See [consolidation and runtime boundaries](docs/CONSOLIDATION.md) for retained interfaces and acceptance scope.
+
+---
 
 ## Retained native guide
 
@@ -15,10 +58,10 @@ Pick one path. Each has one command to install and one to update.
 | You use | Install | Update |
 |---|---|---|
 | **Claude Code, Codex, Copilot, Amplifier or another agent harness** (the easy path) | `npx skills add michaeljabbour/amplifier-bundle-fast-decisions` | `npx skills update` |
-| **Amplifier's own routing** (every session decides on its own) | `amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"` | `amplifier bundle update` |
+| **Amplifier's own routing** (every session decides on its own) | `amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"` | `amplifier bundle update` |
 
 The skill teaches your agent the tool. It tells the agent to install the command line
-(`uv tool install 'amplifier-fast-decisions[local] @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main'`),
+(`uv tool install 'amplifier-fast-decisions[local] @ git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main'`),
 run `amplifier-fast-decisions doctor` first, and check `amplifier-fast-decisions --version`.
 When the CLI is older than the skill expects, the skill tells the agent to upgrade it with
 the same line plus `--force`. So `npx skills update` refreshes the instructions and the
@@ -39,7 +82,7 @@ scenarios Jev and R* were equivalent (cost 1.008x, turn-pass -0.003; preregister
 effort is `medium` (`effort_routing.by_host`; the preregistered C*_F: 0.581x cost, turn-pass -0.013 vs plain Fable,
 H1) and review/explain-shaped sessions stay on the host (`keep_on_host`; H7 could not exclude a 5-point loss). Opus
 5.5 is unchanged: the price gate never routes and the effort is the provider default (no candidate beat plain Opus).
-Evidence: [S1 result](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/v3/program/docs/evidence/2026-10-06-holdout-v3/RESULT.md);
+Evidence: [S1 result](https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/blob/v3/program/docs/evidence/2026-10-06-holdout-v3/RESULT.md);
 config table in [docs/CONFIGURATION.md](docs/CONFIGURATION.md#decider).
 
 **Change note (research-backed defaults).** The shipped behavior now decides once per session
@@ -131,7 +174,7 @@ One command. It applies to the Amplifier command line, the Amplifier terminal ap
 read `~/.amplifier/settings.yaml`, and to every helper session they start:
 
 ```bash
-amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"
+amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"
 ```
 
 - **Decision-maker:** configure `TYPESAFE_API_KEY` for Jev 1.13.0.
@@ -140,7 +183,7 @@ amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-bund
 - **Upgrading from an earlier version:** run `amplifier update` once, and remove any older fast-decisions entry
   (`amplifier bundle remove --app <old-uri>`). Keep this entry last in your app list: later entries win.
 - **Check it:** run a prompt, then
-  `uvx --from git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions afast savings`.
+  `uvx --from git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions afast savings`.
   A dashboard also opens at the start of a session (`afast serve --stop` closes it).
 - **Your choice wins:** picking a model yourself during a session keeps every request on that model (verified in
   the terminal app; Studio uses the same engine).

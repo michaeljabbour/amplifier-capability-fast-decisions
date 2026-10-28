@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-28 — Public site and first-use guide
+
+- Lead with the intended user, concrete benefits, a fictional output preview and a first task.
+- Document canonical public clone/install steps, optional runtime requirements and the boundary of existing verification.
+- Preserve native interfaces, source history and the retained integration guide.
+
 ## 0.3.0 - 2026-10-06
 
 Ships the preregistered S1 decisions (holdout-v3: 60 scenarios no agent had run, 2 repetitions, Fable 5.1 and Opus 5.5;

@@ -25,8 +25,8 @@
   ],
   "examples": [
     {
-      "title": "Fictional worked example",
-      "brief": "A fictional task illustrating Fast Decisions.",
+      "title": "Check a proposed fast path",
+      "brief": "Use Fast Decisions to inspect the installed CLI and run its deterministic doctor. Explain what is available without a scoring provider. Propose one bounded read/list choice and a matched comparison that would test whether it helps; do not enable a hook or start a model service.",
       "before": "A router claims savings from a suggested cheaper choice.",
       "after": "Matched receipts show which calls actually executed and whether the task passed.",
       "why": "Advisory scores alone cannot establish execution or cost avoided.",
@@ -79,5 +79,58 @@
   "docs": [
     "docs/CONSOLIDATION.md"
   ],
-  "publication_status": "Installation and evidence scopes are documented below."
+  "publication_status": "Installation and evidence scopes are documented below.",
+  "marketing": {
+    "headline": "Find the agent decisions worth making cheaper.",
+    "lead": "For developers tuning agent cost and latency. Inspect routing, try bounded advisory choices and compare recorded runs with task outcomes, so an attractive estimate can be checked against what actually executed.",
+    "benefits": [
+      {
+        "title": "See the work behind the bill",
+        "body": "Inspect recorded decisions, model calls and receipts before choosing an optimization."
+      },
+      {
+        "title": "Keep small choices bounded",
+        "body": "Offer eligible candidates and let the host validate the returned choice or accept an abstention."
+      },
+      {
+        "title": "Measure the tradeoff",
+        "body": "Compare matched baseline and enabled runs, including quality, cache effects and cases that cost more."
+      }
+    ],
+    "walkthrough": [
+      {
+        "title": "Inspect your setup",
+        "detail": "Use deterministic doctor and offline diagnosis before configuring an optional scoring service."
+      },
+      {
+        "title": "Offer a narrow choice",
+        "detail": "Start with eligible read or list candidates, or inspect a proposed session launch in dry-run mode."
+      },
+      {
+        "title": "Compare actual runs",
+        "detail": "Record executed calls and task outcomes, then recompute differences rather than equating a suggestion with savings."
+      }
+    ],
+    "use_when": [
+      "You have agent traces and want to identify expensive repeated decisions.",
+      "A small read/list choice has explicit eligible candidates.",
+      "You can compare enabled and baseline runs on the same task."
+    ],
+    "not_for": [
+      "A guaranteed speed or savings improvement.",
+      "Letting a routing suggestion bypass the host’s approval checks."
+    ],
+    "quickstart_prompt": "Use Fast Decisions to inspect the installed CLI and run its deterministic doctor. Explain what is available without a scoring provider. Propose one bounded read/list choice and a matched comparison that would test whether it helps; do not enable a hook or start a model service.",
+    "output_preview": "Question: should this bounded read use a fast path?\nOffered candidates: README.md, docs/architecture.md\nReturned choice: one offered ID, or abstain\nHost checks: offered ID, current state, native permission\n\nComparison receipt\nPredicted cost difference: estimate only\nExecuted model calls: collect from both runs\nTask outcome: check independently\nObserved saving: compute only after those records exist",
+    "example_note": "Fictional routing and measurement outline. It contains no measured speed, cost or task-quality result.",
+    "install_notes": [
+      "Python 3.11 or later is required by the portable install/build helper. The installed method runs through your agent host.",
+      "The native command is amplifier-fast-decisions; the Python import is amplifier_fast_decisions.",
+      "Install the portable skill alone for guidance, or install the native package in a virtual environment for the CLI.",
+      "Deterministic inspection works without a model key. Optional Jev, Laya or local scoring needs its own setup and data-sharing decision."
+    ],
+    "proof_summary": "The reconciled native suite and clean-wheel deterministic rule decision passed. This release does not establish a speed, savings or quality improvement on another person’s workload.",
+    "next_step": "Inspect one trace, choose one narrow intervention and compare it with an unchanged baseline."
+  },
+  "repository_url": "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions"
 }
