@@ -132,5 +132,12 @@
     "proof_summary": "The reconciled native suite and clean-wheel deterministic rule decision passed. This release does not establish a speed, savings or quality improvement on another person’s workload.",
     "next_step": "Inspect one trace, choose one narrow intervention and compare it with an unchanged baseline."
   },
-  "repository_url": "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions"
+  "repository_url": "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions",
+  "film": {
+    "file": "fast-decisions-film",
+    "seconds": 67,
+    "heading": "The cheaper ride.",
+    "blurb": "In 67 seconds, a cheaper model begs for every job, then needs four trips where the usual one needs one. Fast Decisions makes the call once, before the session starts: it checks the price and the project, prints its reasons, and keeps large projects on your usual model. A prediction is not a bill, so you compare matched runs. Captions are on the player; a transcript is below.",
+    "note": "The tasks and prices are a fictional illustration. Savings on your own work are not measured; the film shows how the tool behaves and reports no results."
+  }
 }

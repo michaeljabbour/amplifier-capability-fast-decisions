@@ -2,6 +2,8 @@
 
 Find the agent decisions worth making cheaper.
 
+Watch the [67-second film](https://michaeljabbour.github.io/amplifier-smart-tool-fast-decisions/#film): a cheaper model that costs more in trips, and a decision made once, with its reasons printed. The example in it is fictional.
+
 For developers tuning agent cost and latency. Inspect routing, try bounded advisory choices and compare recorded runs with task outcomes, so an attractive estimate can be checked against what actually executed.
 
 [Explore the site](https://michaeljabbour.github.io/amplifier-smart-tool-fast-decisions/)
