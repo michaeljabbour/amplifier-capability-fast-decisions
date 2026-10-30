@@ -310,3 +310,7 @@ of the previous design: [docs/EVIDENCE.md](docs/EVIDENCE.md) · [CONTRIBUTING.md
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Repository migration
+
+This repository was renamed from `amplifier-smart-tool-fast-decisions` to `amplifier-capability-fast-decisions`. Existing installed method names, bundle aliases and native interfaces stay the same. See the [migration guide](https://michaeljabbour.github.io/migration/) and [repository map](https://michaeljabbour.github.io/migration/mapping.json) for source URL updates.
