@@ -31,7 +31,7 @@ class BuildTests(unittest.TestCase):
         import yaml
         data = yaml.safe_load((ROOT/'bundles/active.yaml').read_text())
         package = data['includes'][0]['bundle']
-        self.assertRegex(package, r'^git\+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@[0-9a-f]{40}$')
+        self.assertRegex(package, r'^git\+https://github.com/michaeljabbour/amplifier-capability-fast-decisions@[0-9a-f]{40}$')
         self.assertEqual(data['session']['orchestrator']['source'], package + '#subdirectory=modules/loop-fast-decisions')
         self.assertEqual(data['session']['orchestrator']['config']['mode'], 'active')
 

@@ -6,7 +6,7 @@ name = "amplifier-module-hooks-fast-decisions"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-  "amplifier-smart-tool-fast-decisions @ git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main",
+  "amplifier-smart-tool-fast-decisions @ git+https://github.com/michaeljabbour/amplifier-capability-fast-decisions@main",
 ]
 [project.entry-points."amplifier.modules"]
 hooks-fast-decisions = "amplifier_module_hooks_fast_decisions:mount"
