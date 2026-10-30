@@ -5,7 +5,7 @@ bundle:
 
 tools:
   - module: tool-jev-cua
-    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/tool-jev-cua
+    source: git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=modules/tool-jev-cua
     config:
       backend: jev
       allow_external_state: true

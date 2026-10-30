@@ -59,7 +59,7 @@ Pick one path. Each has one command to install and one to update.
 
 | You use | Install | Update |
 |---|---|---|
-| **Claude Code, Codex, Copilot, Amplifier or another agent harness** (the easy path) | `npx skills add michaeljabbour/amplifier-bundle-fast-decisions` | `npx skills update` |
+| **Claude Code, Codex, Copilot, Amplifier or another agent harness** (the easy path) | `npx skills add michaeljabbour/amplifier-smart-tool-fast-decisions` | `npx skills update` |
 | **Amplifier's own routing** (every session decides on its own) | `amplifier bundle add --app "git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=behaviors/fast-decisions.yaml"` | `amplifier bundle update` |
 
 The skill teaches your agent the tool. It tells the agent to install the command line

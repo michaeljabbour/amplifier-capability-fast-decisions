@@ -15,7 +15,7 @@ except ImportError as exc:  # pragma: no cover - exercised by the stale-package 
         f"installed amplifier-fast-decisions at {_package.__file__} predates registry mode. "
         "Reinstall it in this environment: uv pip install --python <this python> "
         "--reinstall-package amplifier-fast-decisions --no-deps "
-        "'amplifier-fast-decisions @ git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main'"
+        "'amplifier-smart-tool-fast-decisions @ git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main'"
     ) from exc
 
 __all__ = ["mount"]

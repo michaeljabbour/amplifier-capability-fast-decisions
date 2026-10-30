@@ -167,12 +167,13 @@ def describe_source() -> dict[str, Any]:
         source_kind = "site-packages"
     else:
         source_kind = "unknown"
-    try:
-        package_version = importlib.metadata.version("amplifier-fast-decisions")
-    except importlib.metadata.PackageNotFoundError:
-        package_version = None
-    except Exception:
-        package_version = None
+    package_version = None
+    for dist_name in ("amplifier-smart-tool-fast-decisions", "amplifier-fast-decisions"):
+        try:
+            package_version = importlib.metadata.version(dist_name)
+            break
+        except Exception:
+            continue
     try:
         source_tree_sha256 = tree_sha256(package_dir)
     except Exception:

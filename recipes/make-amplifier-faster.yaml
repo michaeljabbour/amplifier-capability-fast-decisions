@@ -57,9 +57,9 @@ context:
   ollama_url: "http://127.0.0.1:11434"
   mlx_model: "mlx-community/Qwen3-0.6B-4bit"
   mlx_url: "http://127.0.0.1:8080"
-  bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active.yaml"
-  routing_bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-routing.yaml"
-  mlx_bundle_source: "git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=bundles/active-mlx.yaml"
+  bundle_source: "git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=bundles/active.yaml"
+  routing_bundle_source: "git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=bundles/active-routing.yaml"
+  mlx_bundle_source: "git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=bundles/active-mlx.yaml"
   events_dir: "$HOME/.amplifier/fast-decisions/events"
   warm_budget_s: "2.0"
 

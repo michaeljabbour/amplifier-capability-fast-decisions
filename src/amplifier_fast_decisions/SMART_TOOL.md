@@ -23,13 +23,13 @@
       "name": "TypeSafe Jev",
       "purpose": "Default remote judge; TYPESAFE_API_KEY and external-state consent required. Search also requires jg.",
       "optional": true,
-      "install": "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/main/docs/MODEL-SETUP.md"
+      "install": "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/blob/main/docs/MODEL-SETUP.md"
     },
     {
       "name": "Cloudflare Workers AI (clef, clef-flash)",
       "purpose": "Optional opt-in remote judge (--backend/--decider clef or clef-flash); CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and external-state consent required.",
       "optional": true,
-      "install": "https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/blob/main/docs/CONFIGURATION.md#judge-backends"
+      "install": "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/blob/main/docs/CONFIGURATION.md#judge-backends"
     },
     {
       "name": "Jevgrep 0.4.0 (jg)",

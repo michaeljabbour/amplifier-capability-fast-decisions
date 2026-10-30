@@ -31,7 +31,7 @@ class BuildTests(unittest.TestCase):
         import yaml
         data = yaml.safe_load((ROOT/'bundles/active.yaml').read_text())
         package = data['includes'][0]['bundle']
-        self.assertRegex(package, r'^git\+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@[0-9a-f]{40}$')
+        self.assertRegex(package, r'^git\+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@[0-9a-f]{40}$')
         self.assertEqual(data['session']['orchestrator']['source'], package + '#subdirectory=modules/loop-fast-decisions')
         self.assertEqual(data['session']['orchestrator']['config']['mode'], 'active')
 
@@ -48,7 +48,7 @@ class BuildTests(unittest.TestCase):
         rebuilds the tool environment) fails with 'No module named amplifier_fast_decisions'."""
         for name in ('loop-fast-decisions', 'hooks-fast-decisions', 'tool-fast-workspace', 'tool-jevgrep'):
             deps = tomllib.loads((ROOT/f'modules/{name}/pyproject.toml').read_text())['project']['dependencies']
-            self.assertTrue(any(d.startswith('amplifier-fast-decisions @ ') for d in deps), name)
+            self.assertTrue(any(d.startswith('amplifier-smart-tool-fast-decisions @ ') for d in deps), name)
 
     def test_module_entrypoints(self):
         for name in ('loop-fast-decisions','hooks-fast-decisions','tool-fast-workspace','tool-jevgrep'):

@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security vulnerabilities privately via
-[GitHub Security Advisories](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/security/advisories/new)
+[GitHub Security Advisories](https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/security/advisories/new)
 for this repository. Do not open a public issue for a suspected
 vulnerability.
 

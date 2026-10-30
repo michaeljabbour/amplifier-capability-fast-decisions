@@ -60,7 +60,7 @@
   ],
   "sources": [
     {
-      "repo": "amplifier-bundle-fast-decisions",
+      "repo": "amplifier-smart-tool-fast-decisions",
       "commit": "a451fdd307a472102f325f110c9ac4d37efcc29a",
       "paths": [
         "docs/GOAL.md",

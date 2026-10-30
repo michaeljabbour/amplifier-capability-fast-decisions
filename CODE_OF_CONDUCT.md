@@ -39,9 +39,9 @@ in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported via [GitHub issues](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/issues)
+reported via [GitHub issues](https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/issues)
 or, for sensitive reports, through
-[GitHub Security Advisories](https://github.com/michaeljabbour/amplifier-bundle-fast-decisions/security/advisories/new).
+[GitHub Security Advisories](https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions/security/advisories/new).
 All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution

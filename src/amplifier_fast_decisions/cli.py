@@ -222,8 +222,8 @@ def _host_environment_checks(settings: Path | None = None) -> list[dict]:
             if state == "stale":
                 check["note"] = (f"{origin} predates registry mode; the router hook will not load. Reinstall: "
                                  f"uv pip install --python {python} --reinstall-package amplifier-fast-decisions "
-                                 "--no-deps 'amplifier-fast-decisions @ git+https://github.com/michaeljabbour/"
-                                 "amplifier-bundle-fast-decisions@main'")
+                                 "--no-deps 'amplifier-smart-tool-fast-decisions @ git+https://github.com/michaeljabbour/"
+                                 "amplifier-smart-tool-fast-decisions@main'")
             checks.append(check)
     return checks
 

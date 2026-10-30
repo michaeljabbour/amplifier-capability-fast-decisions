@@ -4,7 +4,7 @@ Two independent concerns live here:
 
 1. ``YamlSourceTests`` parses bundle.md / behaviors / bundles YAML directly
    (no amplifier_foundation needed) and checks every module ``source:``
-   points at the supported ``git+https://.../amplifier-bundle-fast-decisions@main#subdirectory=modules/<name>``
+   points at the supported ``git+https://.../amplifier-smart-tool-fast-decisions@main#subdirectory=modules/<name>``
    form, with a matching ``modules/<name>/pyproject.toml`` declaring the
    right entry point. This always runs.
 
@@ -150,12 +150,12 @@ class YamlSourceTests(unittest.TestCase):
                         f"{path}: module {module_name!r} uses unsupported "
                         f"'{UNSUPPORTED_PREFIX}' source form: {source!r}"
                     )
-                if "amplifier-bundle-fast-decisions" not in source:
+                if "amplifier-smart-tool-fast-decisions" not in source:
                     # Not one of our own modules (e.g. foundation's loop-streaming); skip.
                     continue
                 checked_any = True
                 match = re.fullmatch(
-                    r"git\+https://github\.com/michaeljabbour/amplifier-bundle-fast-decisions@"
+                    r"git\+https://github\.com/michaeljabbour/amplifier-smart-tool-fast-decisions@"
                     r"(?:main|[0-9a-f]{40})#subdirectory=modules/([\w-]+)", source,
                 )
                 self.assertIsNotNone(match, f"{path}: unsupported module source {source!r}")
@@ -205,7 +205,7 @@ class ActiveBundleOfflineTests(unittest.TestCase):
         self.assertEqual(routing["price_gate"], {"enabled": True})
         self.assertEqual(len(data["includes"]), 1)
         self.assertRegex(data["includes"][0]["bundle"],
-            r"^git\+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@[0-9a-f]{40}$")
+            r"^git\+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@[0-9a-f]{40}$")
 
 
 class ActiveRoutingBundleOfflineTests(unittest.TestCase):
@@ -329,7 +329,7 @@ class BundleLoadTests(unittest.TestCase):
 
         self.assertRegex(
             orchestrator["source"],
-            r"^git\+https://github\.com/michaeljabbour/amplifier-bundle-fast-decisions@"
+            r"^git\+https://github\.com/michaeljabbour/amplifier-smart-tool-fast-decisions@"
             r"(?:main|[0-9a-f]{40})#subdirectory=modules/loop-fast-decisions$",
         )
 

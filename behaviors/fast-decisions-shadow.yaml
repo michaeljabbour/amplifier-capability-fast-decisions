@@ -10,7 +10,7 @@ bundle:
 
 hooks:
   - module: hooks-fast-decisions
-    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/hooks-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=modules/hooks-fast-decisions
     config:
       mode: shadow
       # deterministic: in-process, offline scorer (external=False) -- the
@@ -58,7 +58,7 @@ context:
 
 tools:
   - module: tool-fast-workspace
-    source: git+https://github.com/michaeljabbour/amplifier-bundle-fast-decisions@main#subdirectory=modules/tool-fast-workspace
+    source: git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=modules/tool-fast-workspace
     config:
       root: .
       max_bytes: 32768
