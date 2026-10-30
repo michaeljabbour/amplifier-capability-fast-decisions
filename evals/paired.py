@@ -1798,6 +1798,25 @@ def extract_rows(out: Path, backend=None, *, specs=None, snap_stats=None, tools_
     return summary
 
 
+def _extract_preserved_workspace(tf, destination: Path) -> None:
+    """Extract only a rooted regular-file/directory workspace, rejecting unsafe members before writes."""
+    import tarfile
+    from pathlib import PurePosixPath
+
+    if not callable(getattr(tarfile, "data_filter", None)):
+        raise PairedError(EXIT_PRECONDITION, "Safe workspace extraction requires tarfile data-filter support")
+    members = tf.getmembers()
+    for member in members:
+        name = PurePosixPath(member.name)
+        if (name.is_absolute() or ".." in name.parts or "\\" in member.name
+                or not name.parts or name.parts[0] != "ws"
+                or not (member.isfile() or member.isdir())):
+            raise PairedError(EXIT_PRECONDITION, "Unsafe member in preserved workspace archive")
+    # No legacy fallback: the data filter is an additional boundary after the
+    # complete preflight; symbolic/hard links and special files are never allowed.
+    tf.extractall(destination, members=members, filter="data")
+
+
 def regrade(out: Path, backend, specs, snapshots, *, passes: int = 1) -> dict:
     """Re-grade every preserved per-turn workspace tarball with no model call. ``passes`` > 1 grades repeatedly
     and reports whether all passes agree (P7: grader determinism)."""
@@ -1814,7 +1833,7 @@ def regrade(out: Path, backend, specs, snapshots, *, passes: int = 1) -> dict:
                     continue
                 with tempfile.TemporaryDirectory() as tmp:
                     with tarfile.open(tar) as tf:
-                        tf.extractall(tmp)
+                        _extract_preserved_workspace(tf, Path(tmp))
                     one[f"{s['key']}#t{t['index']}"] = ps.grade_turn(spec, t["index"], Path(tmp) / "ws",
                                                                       t.get("final_message"), snapshots[s["scenario"]])
         results.append(one)

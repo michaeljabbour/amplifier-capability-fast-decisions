@@ -192,6 +192,12 @@ class StalePackageTests(unittest.TestCase):
                 checks = {c["check"]: c for c in cli._host_environment_checks(Path(settings))}
         self.assertFalse(checks["registry_mode_package[stale]"]["ok"])
         self.assertIn("--reinstall-package", checks["registry_mode_package[stale]"]["note"])
+        import tomllib
+        distribution = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text())["project"]["name"]
+        note = checks["registry_mode_package[stale]"]["note"]
+        self.assertIn(f"'{distribution} @ git+https://github.com/michaeljabbour/", note)
+        self.assertIn(f"--reinstall-package {distribution} ", note)
+        self.assertIn("amplifier-smart-tool-fast-decisions@main'", note)
         self.assertTrue(checks["registry_mode_package[current]"]["ok"])
 
     def test_doctor_probe_ignores_this_process_pythonpath(self):

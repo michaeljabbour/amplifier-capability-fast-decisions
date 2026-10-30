@@ -1,3 +1,8 @@
+# Recipe values are data through the official Amplifier recipes step.env contract.
+# Command source is static, including read-only preflight before the approval gate.
+# This recipe intentionally installs/starts local tools only after explicit approval.
+# Endpoints must be loopback HTTP(S); remote executable installation remains a
+# user-approved software-supply-chain boundary. Do not run against untrusted PATH.
 # make-amplifier-faster.yaml -- "make my amplifier faster", safely and reversibly.
 # Every machine-changing step sits BEHIND the approval gate in stage 1. Each one
 # prints the command before running it, skips work already done, and prints no
@@ -40,7 +45,7 @@ dependencies:
 
 name: "make-amplifier-faster"
 description: "Install the fast-decisions active configuration (local judge -- Ollama by default on every machine, MLX only by explicit opt-in -- plus the active bundle rung, incumbent or routing profile) behind one approval gate, then verify it from receipts."
-version: "1.3.0"
+version: "1.3.1"
 tags: ["fast-decisions", "install", "performance"]
 
 context:
@@ -72,8 +77,32 @@ stages:
         timeout: 30
         output: "machine"
         parse_json: true
+        env:
+          FD_RECIPE_OLLAMA_URL: '{{ollama_url}}'
+          FD_RECIPE_MLX_URL: '{{mlx_url}}'
+          FD_RECIPE_PREFER_HOST: '{{prefer_host}}'
         command: |
           set -uo pipefail
+          # The official recipe engine substitutes env values separately from command source.
+          # Refuse non-local probe destinations before any curl invocation.
+          python3 - <<'PY_VALIDATE_ENDPOINTS'
+          import os
+          from urllib.parse import urlsplit
+          for name in ('FD_RECIPE_OLLAMA_URL', 'FD_RECIPE_MLX_URL'):
+              value = os.environ[name]
+              try:
+                  parsed = urlsplit(value)
+                  port = parsed.port
+              except ValueError:
+                  raise SystemExit('ERROR: local judge URL is malformed') from None
+              if (parsed.scheme not in ('http', 'https') or
+                      parsed.hostname not in ('localhost', '127.0.0.1', '::1') or
+                      parsed.username is not None or parsed.password is not None or
+                      parsed.query or parsed.fragment or
+                      any(ord(char) < 32 or ord(char) == 127 for char in value)):
+                  raise SystemExit('ERROR: judge URLs must use loopback HTTP(S) without credentials/query/fragment')
+          PY_VALIDATE_ENDPOINTS
+          if [ "$?" -ne 0 ]; then exit 1; fi
           os=$(uname -s)
           arch=$(uname -m)
           apple_silicon=false
@@ -91,15 +120,15 @@ stages:
           pyver=$(python3 --version 2>/dev/null | tr -d '"\\' || echo unknown)
           oll_installed=false; command -v ollama >/dev/null 2>&1 && oll_installed=true
           oll_serving=false
-          curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1 && oll_serving=true
+          curl -fsS --max-time 2 "${FD_RECIPE_OLLAMA_URL}/api/tags" >/dev/null 2>&1 && oll_serving=true
           mlx_importable=false
           python3 -c 'import mlx_lm' >/dev/null 2>&1 && mlx_importable=true
           mlx_on_path=false; command -v mlx_lm.server >/dev/null 2>&1 && mlx_on_path=true
           mlx_serving=false
-          curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1 && mlx_serving=true
+          curl -fsS --max-time 2 "${FD_RECIPE_MLX_URL}/health" >/dev/null 2>&1 && mlx_serving=true
           lmstudio_serving=false
           curl -fsS --max-time 2 "http://127.0.0.1:1234/v1/models" >/dev/null 2>&1 && lmstudio_serving=true
-          prefer="{{prefer_host}}"
+          prefer="${FD_RECIPE_PREFER_HOST}"
           mlx_available=false
           mlx_note=''
           prefer_error=''
@@ -133,10 +162,16 @@ stages:
               reason='prefer_host value not recognized; refusing to guess.'
               ;;
           esac
-          printf '{"os":"%s","arch":"%s","apple_silicon":"%s","memory_gb":"%s","python_version":"%s","ollama_installed":"%s","ollama_serving":"%s","mlx_importable":"%s","mlx_on_path":"%s","mlx_serving":"%s","lmstudio_serving":"%s","prefer_host":"%s","mlx_available":"%s","mlx_note":"%s","prefer_error":"%s","chosen_host":"%s","reason":"%s"}\n' \
-            "$os" "$arch" "$apple_silicon" "$mem_gb" "$pyver" "$oll_installed" "$oll_serving" \
+          python3 - "$os" "$arch" "$apple_silicon" "$mem_gb" "$pyver" "$oll_installed" "$oll_serving" \
             "$mlx_importable" "$mlx_on_path" "$mlx_serving" "$lmstudio_serving" \
-            "$prefer" "$mlx_available" "$mlx_note" "$prefer_error" "$chosen_host" "$reason"
+            "$prefer" "$mlx_available" "$mlx_note" "$prefer_error" "$chosen_host" "$reason" <<'PY_MACHINE_JSON'
+          import json, sys
+          fields = ('os', 'arch', 'apple_silicon', 'memory_gb', 'python_version',
+                    'ollama_installed', 'ollama_serving', 'mlx_importable', 'mlx_on_path',
+                    'mlx_serving', 'lmstudio_serving', 'prefer_host', 'mlx_available',
+                    'mlx_note', 'prefer_error', 'chosen_host', 'reason')
+          print(json.dumps(dict(zip(fields, sys.argv[1:]))))
+          PY_MACHINE_JSON
 
   - name: "preflight"
     description: "Read-only. Changes nothing; produces the plan the gate approves. Refuses an impossible prefer_host before anything else runs."
@@ -145,20 +180,25 @@ stages:
         type: "bash"
         timeout: 30
         output: "host_guard"
+        env:
+          FD_RECIPE_MACHINE_PREFER_ERROR: '{{machine.prefer_error}}'
+          FD_RECIPE_MACHINE_PREFER_HOST: '{{machine.prefer_host}}'
+          FD_RECIPE_MACHINE_CHOSEN_HOST: '{{machine.chosen_host}}'
         command: |
           set -uo pipefail
-          err="{{machine.prefer_error}}"
+          err="${FD_RECIPE_MACHINE_PREFER_ERROR}"
           if [ -n "$err" ]; then
             echo "ERROR: $err" >&2
             exit 1
           fi
-          echo "prefer_host={{machine.prefer_host}} -> chosen_host={{machine.chosen_host}}"
+          echo "prefer_host=${FD_RECIPE_MACHINE_PREFER_HOST} -> chosen_host=${FD_RECIPE_MACHINE_CHOSEN_HOST}"
 
       - id: "probe"
         type: "bash"
         timeout: 180
         output: "probe"
         parse_json: true
+        env: {}
         command: |
           set -uo pipefail
           amp=$(amplifier --version 2>/dev/null | head -1 | tr -d '"\\' || echo unknown)
@@ -243,6 +283,7 @@ stages:
         condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 900
         output: "ollama_install"
+        env: {}
         command: |
           set -uo pipefail
           if command -v ollama >/dev/null 2>&1; then echo "skip: ollama already at $(command -v ollama)"; exit 0; fi
@@ -258,50 +299,71 @@ stages:
         condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 120
         output: "ollama_server"
+        env:
+          FD_RECIPE_OLLAMA_URL: '{{ollama_url}}'
         command: |
           set -uo pipefail
-          if curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1; then echo "skip: server already serving {{ollama_url}}"; exit 0; fi
+          if curl -fsS --max-time 2 "${FD_RECIPE_OLLAMA_URL}/api/tags" >/dev/null 2>&1; then echo "skip: server already serving ${FD_RECIPE_OLLAMA_URL}"; exit 0; fi
           echo "+ ollama serve  (background, log: /tmp/ollama-fast-decisions.log)"
           nohup ollama serve >/tmp/ollama-fast-decisions.log 2>&1 &
           for i in $(seq 1 30); do
             sleep 1
-            curl -fsS --max-time 2 "{{ollama_url}}/api/tags" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
+            curl -fsS --max-time 2 "${FD_RECIPE_OLLAMA_URL}/api/tags" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
           done
-          echo "ERROR: {{ollama_url}} unreachable after 30s -- see /tmp/ollama-fast-decisions.log" >&2; exit 1
+          echo "ERROR: ${FD_RECIPE_OLLAMA_URL} unreachable after 30s -- see /tmp/ollama-fast-decisions.log" >&2; exit 1
 
       - id: "pull-model"
         type: "bash"
         condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 1800
         output: "model_pull"
+        env:
+          FD_RECIPE_OLLAMA_URL: '{{ollama_url}}'
+          FD_RECIPE_OLLAMA_MODEL: '{{ollama_model}}'
         command: |
           set -uo pipefail
-          if curl -fsS --max-time 5 "{{ollama_url}}/api/tags" 2>/dev/null | grep -q "{{ollama_model}}"; then echo "skip: {{ollama_model}} already pulled"; exit 0; fi
-          echo "+ ollama pull {{ollama_model}}   (~600 MB)"; ollama pull "{{ollama_model}}"
+          if curl -fsS --max-time 5 "${FD_RECIPE_OLLAMA_URL}/api/tags" 2>/dev/null | python3 -c 'import json, sys
+          try:
+              data = json.load(sys.stdin)
+              models = data.get("models", [])
+              found = any(isinstance(model, dict) and model.get("name") == sys.argv[1] for model in models)
+          except (ValueError, TypeError, AttributeError):
+              found = False
+          sys.exit(0 if found else 1)' "${FD_RECIPE_OLLAMA_MODEL}"; then echo "skip: ${FD_RECIPE_OLLAMA_MODEL} already pulled"; exit 0; fi
+          echo "+ ollama pull ${FD_RECIPE_OLLAMA_MODEL}   (~600 MB)"; ollama pull "${FD_RECIPE_OLLAMA_MODEL}"
 
       - id: "warm-model"
         type: "bash"
         condition: "{{machine.chosen_host}} == 'ollama'"
         timeout: 600
         output: "warm"
+        env:
+          FD_RECIPE_OLLAMA_MODEL: '{{ollama_model}}'
+          FD_RECIPE_OLLAMA_URL: '{{ollama_url}}'
+          FD_RECIPE_WARM_BUDGET_S: '{{warm_budget_s}}'
         command: |
           set -uo pipefail
-          P='{"model":"{{ollama_model}}","prompt":"ok","stream":false,"options":{"num_predict":1}}'
-          echo "+ POST {{ollama_url}}/api/generate  (load, untimed)"
-          curl -fsS --max-time 300 -o /dev/null -X POST "{{ollama_url}}/api/generate" -H 'Content-Type: application/json' -d "$P" \
-            || { echo "ERROR: {{ollama_url}} unreachable or model failed to load" >&2; exit 1; }
-          echo "+ POST {{ollama_url}}/api/generate  (warm, timed)"
-          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "{{ollama_url}}/api/generate" -H 'Content-Type: application/json' -d "$P") \
+          P=$(python3 - "${FD_RECIPE_OLLAMA_MODEL}" <<'PY_MODEL_JSON'
+          import json, sys
+          print(json.dumps({"model": sys.argv[1], "prompt": "ok", "stream": False, "options": {"num_predict": 1}}))
+          PY_MODEL_JSON
+          ) || exit 1
+          echo "+ POST ${FD_RECIPE_OLLAMA_URL}/api/generate  (load, untimed)"
+          curl -fsS --max-time 300 -o /dev/null -X POST "${FD_RECIPE_OLLAMA_URL}/api/generate" -H 'Content-Type: application/json' -d "$P" \
+            || { echo "ERROR: ${FD_RECIPE_OLLAMA_URL} unreachable or model failed to load" >&2; exit 1; }
+          echo "+ POST ${FD_RECIPE_OLLAMA_URL}/api/generate  (warm, timed)"
+          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "${FD_RECIPE_OLLAMA_URL}/api/generate" -H 'Content-Type: application/json' -d "$P") \
             || { echo "ERROR: warm call failed" >&2; exit 1; }
-          echo "warm latency ${t}s (budget {{warm_budget_s}}s)"
-          awk -v t="$t" -v b="{{warm_budget_s}}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
-            || { echo "ERROR: warm latency ${t}s exceeds the {{warm_budget_s}}s budget -- stopping before any bundle change" >&2; exit 1; }
+          echo "warm latency ${t}s (budget ${FD_RECIPE_WARM_BUDGET_S}s)"
+          awk -v t="$t" -v b="${FD_RECIPE_WARM_BUDGET_S}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
+            || { echo "ERROR: warm latency ${t}s exceeds the ${FD_RECIPE_WARM_BUDGET_S}s budget -- stopping before any bundle change" >&2; exit 1; }
 
       - id: "install-mlx"
         type: "bash"
         condition: "{{machine.chosen_host}} == 'mlx'"
         timeout: 900
         output: "mlx_install"
+        env: {}
         command: |
           set -uo pipefail
           if python3 -c 'import mlx_lm' >/dev/null 2>&1 || command -v mlx_lm.server >/dev/null 2>&1; then
@@ -315,37 +377,48 @@ stages:
         condition: "{{machine.chosen_host}} == 'mlx'"
         timeout: 120
         output: "mlx_server"
+        env:
+          FD_RECIPE_MLX_URL: '{{mlx_url}}'
+          FD_RECIPE_MLX_MODEL: '{{mlx_model}}'
         command: |
           set -uo pipefail
-          if curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1; then echo "skip: server already serving {{mlx_url}}"; exit 0; fi
+          if curl -fsS --max-time 2 "${FD_RECIPE_MLX_URL}/health" >/dev/null 2>&1; then echo "skip: server already serving ${FD_RECIPE_MLX_URL}"; exit 0; fi
           server_bin=mlx_lm.server
           command -v "$server_bin" >/dev/null 2>&1 || server_bin="$(uv tool dir)/mlx-lm/bin/mlx_lm.server"
-          echo "+ $server_bin --model {{mlx_model}}  (background, log: /tmp/mlx-fast-decisions.log)"
-          nohup "$server_bin" --model "{{mlx_model}}" --host 127.0.0.1 --port 8080 \
+          echo "+ $server_bin --model ${FD_RECIPE_MLX_MODEL}  (background, log: /tmp/mlx-fast-decisions.log)"
+          nohup "$server_bin" --model "${FD_RECIPE_MLX_MODEL}" --host 127.0.0.1 --port 8080 \
             >/tmp/mlx-fast-decisions.log 2>&1 &
           for i in $(seq 1 60); do
             sleep 1
-            curl -fsS --max-time 2 "{{mlx_url}}/health" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
+            curl -fsS --max-time 2 "${FD_RECIPE_MLX_URL}/health" >/dev/null 2>&1 && { echo "server reachable after ${i}s"; exit 0; }
           done
-          echo "ERROR: {{mlx_url}} unreachable after 60s -- see /tmp/mlx-fast-decisions.log" >&2; exit 1
+          echo "ERROR: ${FD_RECIPE_MLX_URL} unreachable after 60s -- see /tmp/mlx-fast-decisions.log" >&2; exit 1
 
       - id: "warm-mlx-model"
         type: "bash"
         condition: "{{machine.chosen_host}} == 'mlx'"
         timeout: 600
         output: "mlx_warm"
+        env:
+          FD_RECIPE_MLX_MODEL: '{{mlx_model}}'
+          FD_RECIPE_MLX_URL: '{{mlx_url}}'
+          FD_RECIPE_WARM_BUDGET_S: '{{warm_budget_s}}'
         command: |
           set -uo pipefail
-          P='{"model":"{{mlx_model}}","prompt":"ok","max_tokens":1,"temperature":0}'
-          echo "+ POST {{mlx_url}}/v1/completions  (load, untimed)"
-          curl -fsS --max-time 300 -o /dev/null -X POST "{{mlx_url}}/v1/completions" -H 'Content-Type: application/json' -d "$P" \
-            || { echo "ERROR: {{mlx_url}} unreachable or model failed to load" >&2; exit 1; }
-          echo "+ POST {{mlx_url}}/v1/completions  (warm, timed)"
-          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "{{mlx_url}}/v1/completions" -H 'Content-Type: application/json' -d "$P") \
+          P=$(python3 - "${FD_RECIPE_MLX_MODEL}" <<'PY_MODEL_JSON'
+          import json, sys
+          print(json.dumps({"model": sys.argv[1], "prompt": "ok", "max_tokens": 1, "temperature": 0}))
+          PY_MODEL_JSON
+          ) || exit 1
+          echo "+ POST ${FD_RECIPE_MLX_URL}/v1/completions  (load, untimed)"
+          curl -fsS --max-time 300 -o /dev/null -X POST "${FD_RECIPE_MLX_URL}/v1/completions" -H 'Content-Type: application/json' -d "$P" \
+            || { echo "ERROR: ${FD_RECIPE_MLX_URL} unreachable or model failed to load" >&2; exit 1; }
+          echo "+ POST ${FD_RECIPE_MLX_URL}/v1/completions  (warm, timed)"
+          t=$(curl -fsS --max-time 60 -o /dev/null -w '%{time_total}' -X POST "${FD_RECIPE_MLX_URL}/v1/completions" -H 'Content-Type: application/json' -d "$P") \
             || { echo "ERROR: warm call failed" >&2; exit 1; }
-          echo "warm latency ${t}s (budget {{warm_budget_s}}s)"
-          awk -v t="$t" -v b="{{warm_budget_s}}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
-            || { echo "ERROR: warm latency ${t}s exceeds the {{warm_budget_s}}s budget -- stopping before any bundle change" >&2; exit 1; }
+          echo "warm latency ${t}s (budget ${FD_RECIPE_WARM_BUDGET_S}s)"
+          awk -v t="$t" -v b="${FD_RECIPE_WARM_BUDGET_S}" 'BEGIN{ if (t+0 > b+0) exit 1 }' \
+            || { echo "ERROR: warm latency ${t}s exceeds the ${FD_RECIPE_WARM_BUDGET_S}s budget -- stopping before any bundle change" >&2; exit 1; }
 
   - name: "bundle-rung"
     description: "Add the active rung matching the chosen judge host, or refresh it if already cached."
@@ -354,14 +427,20 @@ stages:
         type: "bash"
         timeout: 900
         output: "rung"
+        env:
+          FD_RECIPE_MACHINE_CHOSEN_HOST: '{{machine.chosen_host}}'
+          FD_RECIPE_MLX_BUNDLE_SOURCE: '{{mlx_bundle_source}}'
+          FD_RECIPE_PROFILE: '{{profile}}'
+          FD_RECIPE_ROUTING_BUNDLE_SOURCE: '{{routing_bundle_source}}'
+          FD_RECIPE_BUNDLE_SOURCE: '{{bundle_source}}'
         command: |
           set -uo pipefail
-          if [ "{{machine.chosen_host}}" = "mlx" ]; then
-            source="{{mlx_bundle_source}}"
-          elif [ "{{profile}}" = "routing" ]; then
-            source="{{routing_bundle_source}}"
+          if [ "${FD_RECIPE_MACHINE_CHOSEN_HOST}" = "mlx" ]; then
+            source="${FD_RECIPE_MLX_BUNDLE_SOURCE}"
+          elif [ "${FD_RECIPE_PROFILE}" = "routing" ]; then
+            source="${FD_RECIPE_ROUTING_BUNDLE_SOURCE}"
           else
-            source="{{bundle_source}}"
+            source="${FD_RECIPE_BUNDLE_SOURCE}"
           fi
           if amplifier bundle list 2>/dev/null | grep -qi "fast-decisions-active"; then
             echo "active rung already installed -- refreshing"
@@ -381,10 +460,17 @@ stages:
         parse_json: true
         on_error: "continue"
         output_exit_code: "verify_code"
+        env:
+          FD_RECIPE_EVENTS_DIR: '{{events_dir}}'
+          FD_RECIPE_MACHINE_CHOSEN_HOST: '{{machine.chosen_host}}'
         command: |
           set -uo pipefail
-          EV="{{events_dir}}"
-          EXPECT="{{machine.chosen_host}}"
+          EV=$(python3 - "${FD_RECIPE_EVENTS_DIR}" <<'PY_EVENTS_PATH'
+          import os, sys
+          print(os.path.expanduser(os.path.expandvars(sys.argv[1])))
+          PY_EVENTS_PATH
+          ) || exit 1
+          EXPECT="${FD_RECIPE_MACHINE_CHOSEN_HOST}"
           T=$(mktemp -d) || exit 1
           printf '# Demo\n\nA temporary directory used to verify fast-decisions.\n' > "$T/README.md"
           : > "$T/.mark"; sleep 1
@@ -406,8 +492,12 @@ stages:
           else
             note="COULD NOT CHECK: events dir $EV does not exist"
           fi
-          printf '{"run_exit":"%s","receipts_found":"%s","source_event":"%s","mode":"%s","backend":"%s","expected_backend":"%s","latency_ms":"%s","note":"%s","tmpdir":"%s"}\n' \
-            "$rc" "$found" "$srcev" "$mode" "$backend" "$EXPECT" "$lat" "$note" "$T"
+          python3 - "$rc" "$found" "$srcev" "$mode" "$backend" "$EXPECT" "$lat" "$note" "$T" <<'PY_RECEIPT_JSON'
+          import json, sys
+          fields = ('run_exit', 'receipts_found', 'source_event', 'mode', 'backend',
+                    'expected_backend', 'latency_ms', 'note', 'tmpdir')
+          print(json.dumps(dict(zip(fields, sys.argv[1:]))))
+          PY_RECEIPT_JSON
 
   - name: "report"
     description: "Plain-language summary of what changed, how to watch it, how to undo it."

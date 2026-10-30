@@ -35,6 +35,7 @@ import time
 import urllib.request
 
 import forge_workloads
+from grader_env import grader_env
 import memguard
 from forge_workloads import SPECS, STARTERS, PUBLIC, evaluate
 
@@ -1200,7 +1201,7 @@ def _interpreter_with_pytest():
         candidates.append(py3)
     for interp in candidates:
         try:
-            proc = subprocess.run([interp, '-c', 'import pytest'], capture_output=True, timeout=10)
+            proc = subprocess.run([interp, '-c', 'import pytest'], capture_output=True, timeout=10, env=grader_env())
         except (OSError, subprocess.TimeoutExpired):
             continue
         if proc.returncode == 0:
@@ -1231,7 +1232,7 @@ def run_workspace_tests(workspace, timeout=45, targets=None):
         # via setuptools entrypoints, e.g. framework-specific pytest plugins) can crash on
         # import when the candidate workspace's PYTHONPATH doesn't include their deps --
         # that is not a test failure, so run pytest in its bare, plugin-autoload-free mode.
-        env = {**os.environ, 'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'}
+        env = grader_env({'PYTEST_DISABLE_PLUGIN_AUTOLOAD': '1'})
         try:
             proc = subprocess.run(argv, cwd=workspace, capture_output=True, text=True, timeout=timeout, env=env)
         except subprocess.TimeoutExpired:
@@ -1244,7 +1245,7 @@ def run_workspace_tests(workspace, timeout=45, targets=None):
         return False, 'pytest', summary
     unittest_argv = [sys.executable, '-m', 'unittest'] + (['-v', *targets] if targets else ['discover', '-v'])
     try:
-        proc = subprocess.run(unittest_argv, cwd=workspace, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(unittest_argv, cwd=workspace, capture_output=True, text=True, timeout=timeout, env=grader_env())
     except subprocess.TimeoutExpired:
         return False, 'unittest', 'unittest timed out'
     summary = ((getattr(proc, 'stdout', None) or '') + (getattr(proc, 'stderr', None) or ''))[-4000:]

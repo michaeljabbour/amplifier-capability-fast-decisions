@@ -45,6 +45,7 @@ from typing import Callable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import battery_tasks as bt  # noqa: E402  (Task dataclass + PROMPT_SUFFIX contract)
 import memguard  # noqa: E402  (every exercise runner executes untrusted code under a memory cap)
+from grader_env import grader_env
 
 TIMEOUT = 120
 
@@ -118,6 +119,7 @@ def _run(cmd, **kw):
     on a memory kill, which the runner wrappers below turn into a failed `resource_limit` check."""
     if memguard.ENV_TIMEOUT in os.environ:       # campaign policy (300 s per grader run) raises the S2 default of 120 s
         kw["timeout"] = max(float(kw.get("timeout") or 0), float(os.environ[memguard.ENV_TIMEOUT]))
+    kw["env"] = grader_env(kw.get("env"))
     return memguard.run(cmd, **kw)
 
 
@@ -201,7 +203,7 @@ def _interpreter_with_pytest() -> str | None:
             candidates.append(found)
     for interp in candidates:
         try:
-            proc = subprocess.run([interp, "-c", "import pytest"], capture_output=True, timeout=10)
+            proc = subprocess.run([interp, "-c", "import pytest"], capture_output=True, timeout=10, env=grader_env())
         except (OSError, subprocess.TimeoutExpired):
             continue
         if proc.returncode == 0:
@@ -220,7 +222,7 @@ def _python_run(exercise_root: Path, test_files: list[str]) -> dict:
             capture_output=True,
             text=True,
             timeout=TIMEOUT,
-            env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
+            env=grader_env({"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}),
         )
     except FileNotFoundError:
         return _toolchain_missing("pytest")

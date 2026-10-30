@@ -1,1 +1,6 @@
 typesafe-sdk==0.7.2
+# Security: typesafe-sdk only requires httpx2>=2.0.0 (no release of typesafe-sdk
+# up to 0.7.5 caps it), but scanners resolve httpx2/httpcore2 2.9.1, which has
+# advisories fixed in httpx2 2.12.0 / httpcore2 2.10.0. Floor them explicitly.
+httpx2>=2.12.0
+httpcore2>=2.10.0

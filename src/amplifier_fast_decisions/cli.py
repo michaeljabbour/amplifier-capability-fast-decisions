@@ -52,6 +52,42 @@ DEFAULT_STATE_FILE = Path.home() / ".amplifier" / "fast-decisions" / "serve.json
 DEFAULT_MLX_URL = "http://127.0.0.1:8080"
 
 
+def _token_url_allowed(url: str) -> bool:
+    """True when a bearer token may be sent to ``url``.
+
+    Allowed: ``https`` anywhere, or ``http`` to a loopback host only
+    (``localhost``, ``127.0.0.1``, ``::1``). Endpoints come from env vars, so
+    anything else (plain http to a remote host, other schemes, hostnames that
+    merely start with ``localhost``) would leak the credential in cleartext
+    or to an attacker-chosen host.
+    """
+    from urllib.parse import urlsplit
+
+    try:
+        parts = urlsplit(url or "")
+        scheme, host = parts.scheme.lower(), (parts.hostname or "").lower()
+    except ValueError:
+        return False
+    if scheme == "https":
+        return bool(host)
+    return scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}
+
+
+# Authorization uses unredirected headers below: urllib must not carry a token
+# to a redirect target that was never checked by this policy.
+
+
+def _refused_insecure(check: str, url: str, token_env: str) -> dict:
+    return {
+        "check": check,
+        "ok": False,
+        "value": url,
+        "state": "refused_insecure_url",
+        "note": f"Refused to send ${token_env} to a non-https, non-loopback URL; "
+                "use https:// (or http to localhost/127.0.0.1/::1). No request was made.",
+    }
+
+
 def _mlx_server_check() -> dict:
     """Read-only GET /health probe against a locally running mlx_lm.server.
 
@@ -109,11 +145,13 @@ def _hosted_server_check() -> dict:
         or HOSTED_DEFAULT_TOKEN_ENV
     )
     api_key = os.getenv(key_env)
+    if api_key and not _token_url_allowed(url):
+        return _refused_insecure("hosted_judge", url, key_env)
     state = "unreachable"
     try:
         req = urllib.request.Request(f"{url}/models", method="GET")
         if api_key:
-            req.add_header("Authorization", f"Bearer {api_key}")
+            req.add_unredirected_header("Authorization", f"Bearer {api_key}")
         with urllib.request.urlopen(req, timeout=2) as response:
             state = "reachable" if response.status == 200 else "unreachable"
     except urllib.error.HTTPError as exc:
@@ -149,6 +187,8 @@ def _laya_server_check() -> dict:
     url = os.getenv("FAST_DECISIONS_LAYA_URL") or LAYA_DEFAULT_URL
     token_env = os.getenv("FAST_DECISIONS_LAYA_TOKEN_ENV") or LAYA_DEFAULT_TOKEN_ENV
     token = os.getenv(token_env)
+    if token and not _token_url_allowed(url):
+        return _refused_insecure("laya_judge", url, token_env)
     state = "unreachable"
     try:
         req = urllib.request.Request(
@@ -156,7 +196,7 @@ def _laya_server_check() -> dict:
             headers={"User-Agent": "amplifier-fast-decisions/0.1"},
         )
         if token:
-            req.add_header("Authorization", f"Bearer {token}")
+            req.add_unredirected_header("Authorization", f"Bearer {token}")
         with urllib.request.urlopen(req, timeout=1) as response:
             state = "reachable" if response.status == 200 else "unreachable"
     except urllib.error.HTTPError as exc:
@@ -221,7 +261,7 @@ def _host_environment_checks(settings: Path | None = None) -> list[dict]:
                      "value": state or "unknown", "python": python}
             if state == "stale":
                 check["note"] = (f"{origin} predates registry mode; the router hook will not load. Reinstall: "
-                                 f"uv pip install --python {python} --reinstall-package amplifier-fast-decisions "
+                                 f"uv pip install --python {python} --reinstall-package amplifier-smart-tool-fast-decisions "
                                  "--no-deps 'amplifier-smart-tool-fast-decisions @ git+https://github.com/michaeljabbour/"
                                  "amplifier-smart-tool-fast-decisions@main'")
             checks.append(check)
@@ -491,9 +531,6 @@ def bench_suite(args) -> int:
     )
     hosted_api_key = os.getenv(hosted_token_env)
     hosted_gates = bool(live_requested and hosted_api_key)
-    # Legacy names, same values -- kept for readability at call sites below.
-    gateway_key_env = hosted_token_env
-    gateway_gates = hosted_gates
     backend_name = args.backend
     model_arg = getattr(args, "model", None)
     if live_requested and backend_name == "jev" and both_gates:

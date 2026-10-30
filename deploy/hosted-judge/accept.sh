@@ -18,6 +18,36 @@ set -euo pipefail
 
 : "${JUDGE_API_BASE:?set JUDGE_API_BASE to the LiteLLM base URL}"
 : "${JUDGE_API_KEY:?set JUDGE_API_KEY to a scoped inference key}"
+# A scoped inference key must never be sent over public plaintext HTTP.
+# Validate before printing the endpoint or running any probe. Userinfo/query
+# credentials are not accepted as part of this base URL.
+python3 - "$JUDGE_API_BASE" <<'URL_POLICY'
+import ipaddress
+import sys
+from urllib.parse import urlsplit
+
+value = sys.argv[1]
+try:
+    if any(ord(c) <= 32 or ord(c) == 127 for c in value):
+        raise ValueError("URL contains whitespace or control characters")
+    url = urlsplit(value)
+    host = url.hostname
+    _ = url.port  # Reject malformed/out-of-range ports before curl sees them.
+    if not host or url.username is not None or url.password is not None or url.query or url.fragment:
+        raise ValueError("base URL must have a host and no userinfo, query or fragment")
+    loopback = host.lower() == "localhost"
+    if not loopback:
+        try:
+            loopback = ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            pass
+    if url.scheme.lower() != "https" and not (url.scheme.lower() == "http" and loopback):
+        raise ValueError("bearer credentials require HTTPS or loopback HTTP")
+except ValueError as exc:
+    print("accept.sh: refused JUDGE_API_BASE: " + str(exc), file=sys.stderr)
+    sys.exit(2)
+URL_POLICY
+
 MODEL="${JUDGE_MODEL:-fast-decisions-judge}"
 N="${ACCEPT_PROBES:-200}"
 
@@ -53,7 +83,7 @@ import json, sys
 d = json.loads(sys.argv[1])
 print(d.get('model', ''))
 " "$response")
-  case "$returned_model" in *"$MODEL"*) ;; *) bad_model=$((bad_model + 1));; esac
+  [ "$returned_model" = "$MODEL" ] || bad_model=$((bad_model + 1))
 done
 
 python3 -c "

@@ -266,7 +266,9 @@ class TestInterpreterWithPytestProbe(unittest.TestCase):
         self.addCleanup(pt._interpreter_with_pytest.cache_clear)
 
     def _fake_run(self, ok_for):
-        def _run(argv, capture_output=True, timeout=10):
+        def _run(argv, capture_output=True, timeout=10, env=None):
+            self.assertIsNotNone(env)
+            self.assertNotIn("ANTHROPIC_API_KEY", env)
             interp = argv[0]
             proc = mock.Mock()
             proc.returncode = 0 if interp in ok_for else 1

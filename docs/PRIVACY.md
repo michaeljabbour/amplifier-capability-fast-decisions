@@ -68,3 +68,24 @@ read the desktop itself. Marked sensitive controls are excluded; callers must al
 remove private text from the goal and summary. Native `cua_decided` telemetry keeps
 model, operation, status, probabilities, latency, usage and a state hash, not UI
 labels, values, coordinates, surface identifiers or goals. See [Jev-CUA](JEV-CUA.md).
+
+
+## Candidate grader environments
+
+Local benchmark graders use `scripts/grader_env.py` to build child environments from an explicit runtime and toolchain allowlist. Provider credentials, unknown variables, proxy credentials, and host agent integration variables are not inherited by candidate imports, tests, compilers or shell graders. Runtime paths, locale, temporary directories, selected toolchain/cache settings, and the nonsecret `SERVICE_PORT` fixture are retained. Model and agent harness launches keep their separate authentication path; this helper is only for grading.
+
+Environment scrubbing is not a filesystem or network sandbox. Candidate code can still access files (including HOME and tool caches) and use the network under the process's OS permissions. Process separation, timeouts and memory caps do not make arbitrary untrusted code safe. Run hostile candidates in separate OS or container isolation with restricted mounts, network and credentials.
+
+## Local install recipe inputs
+
+`recipes/make-amplifier-faster.yaml` requires the official recipe engine's
+`step.env` support. Context values and machine-review output are environment
+data; Bash command source is static even before the approval gate. Quoted model
+values and report paths are serialized as JSON data, without `eval` or `source`.
+Judge probe URLs must be HTTP(S) loopback endpoints without URL credentials,
+query strings or fragments. Read-only probes occur before the default-deny gate;
+installing software, pulling a model, starting a server and changing the bundle
+require approval. The Linux Ollama installer is still an explicit remote-code
+trust boundary. This recipe does not isolate an untrusted PATH, installed
+executables or a local service, and offline fake-command tests are not live
+provider, package-installer or recipe-host acceptance.

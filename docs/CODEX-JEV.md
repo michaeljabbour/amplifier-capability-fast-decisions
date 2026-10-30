@@ -26,6 +26,11 @@ python3 -m venv .venv
 .venv/bin/pip install -r scripts/jev-router-requirements.txt
 ```
 
+The requirements file floors `httpx2>=2.12.0` / `httpcore2>=2.10.0` explicitly:
+`typesafe-sdk` (all releases through 0.7.5) only requires `httpx2>=2.0.0`, and 2.9.1
+carries known advisories (`osv-scanner scan source -L scripts/jev-router-requirements.txt`
+is clean with the floors).
+
 Install the complete official skill directory into `.agents/skills/typesafe-ai`
 using the [official manual method](https://docs.typesafe.ai/agent-skill).
 Do not also install a duplicate global copy. Skill files and the virtual

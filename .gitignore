@@ -32,3 +32,4 @@ evals/swebench/results/
 uv.lock
 
 _site/
+.research/

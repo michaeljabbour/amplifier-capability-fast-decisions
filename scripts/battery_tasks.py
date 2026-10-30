@@ -33,6 +33,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from grader_env import grader_env
+
 TIMEOUT = 20
 
 PROMPT_SUFFIX = (
@@ -82,6 +84,7 @@ def _run_snippet(workspace: Path, snippet: str, timeout: int = TIMEOUT) -> tuple
             text=True,
             timeout=timeout,
             cwd=str(workspace),
+            env=grader_env(),
         )
     except subprocess.TimeoutExpired:
         return None, "timeout"
@@ -1193,6 +1196,7 @@ def _evaluate_cli_dry_run(workspace: Path) -> dict:
                 text=True,
                 timeout=TIMEOUT,
                 cwd=str(workspace),
+                env=grader_env(),
             )
 
         total += 1

@@ -10,6 +10,10 @@ import hashlib, json, os, threading, time, uuid
 import httpx
 
 BASE = (os.environ.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com").rstrip("/")
+from urllib.parse import urlsplit
+_u = urlsplit(BASE)
+if not (_u.scheme == "https" or (_u.scheme == "http" and _u.hostname in ("localhost", "127.0.0.1", "::1"))):
+    raise SystemExit("refusing to send API keys: ANTHROPIC_BASE_URL must be https or loopback http")
 K1 = os.environ["ANTHROPIC_PROVIDER_ANTHROPIC_API_KEY"]   # what provider-anthropic uses
 K2 = os.environ.get("ANTHROPIC_API_KEY")                  # second key, if different
 KEYS = {"K1_provider": K1, "K2_other": K2}

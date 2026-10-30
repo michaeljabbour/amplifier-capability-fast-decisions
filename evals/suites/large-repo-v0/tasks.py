@@ -20,13 +20,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from grader_env import grader_env
+
 PINNED_SHA = "30bbb7f"
 
 
 def _env(ws: Path) -> dict:
     # Fresh bytecode cache per check: never trust a .pyc the agent's own runs
     # left behind (same-second, same-size edits would read stale bytecode).
-    return dict(os.environ, PYTHONPATH=str(ws / "src"), PYTHONPYCACHEPREFIX=tempfile.mkdtemp())
+    return grader_env({"PYTHONPATH": str(ws / "src"), "PYTHONPYCACHEPREFIX": tempfile.mkdtemp()})
 
 
 def _py(ws: Path, code: str, timeout: int = 60) -> subprocess.CompletedProcess:
@@ -36,7 +39,7 @@ def _py(ws: Path, code: str, timeout: int = 60) -> subprocess.CompletedProcess:
 
 
 def _git(ws: Path, *args: str) -> str:
-    return subprocess.run(["git", *args], cwd=ws, capture_output=True, text=True, check=True).stdout
+    return subprocess.run(["git", *args], cwd=ws, env=grader_env(), capture_output=True, text=True, check=True).stdout
 
 
 def _changed_tracked(ws: Path) -> set[str]:

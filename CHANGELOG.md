@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-30 — install recipe data boundary
+
+- Keep all twelve Bash commands static and pass recipe inputs through official `step.env`, including pre-approval machine review.
+- Restrict local judge probes to loopback HTTP(S), serialize model and evidence values as JSON data, and preserve the default-deny installation gate.
+- Add offline command-injection, literal-argument, endpoint and read-only preflight regressions using fictional values and fake tools.
+
+## 2026-10-30 — Reinstall identity
+
+- Use the actual declared public distribution name consistently in both parts of the doctor reinstall hint, with the current public Git repository. Keep repository branding separate from package identity.
+
 ## 2026-10-28 — Film
 
 - Add a 67-second film to the site, with captions, a transcript, a poster and a 15-second cut. The example in it is fictional, and it reports no results.

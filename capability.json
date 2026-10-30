@@ -118,7 +118,7 @@
     ],
     "not_for": [
       "A guaranteed speed or savings improvement.",
-      "Letting a routing suggestion bypass the host’s approval checks."
+      "Letting a routing suggestion bypass the host\u2019s approval checks."
     ],
     "quickstart_prompt": "Use Fast Decisions to inspect the installed CLI and run its deterministic doctor. Explain what is available without a scoring provider. Propose one bounded read/list choice and a matched comparison that would test whether it helps; do not enable a hook or start a model service.",
     "output_preview": "Question: should this bounded read use a fast path?\nOffered candidates: README.md, docs/architecture.md\nReturned choice: one offered ID, or abstain\nHost checks: offered ID, current state, native permission\n\nComparison receipt\nPredicted cost difference: estimate only\nExecuted model calls: collect from both runs\nTask outcome: check independently\nObserved saving: compute only after those records exist",
@@ -129,15 +129,101 @@
       "Install the portable skill alone for guidance, or install the native package in a virtual environment for the CLI.",
       "Deterministic inspection works without a model key. Optional Jev, Laya or local scoring needs its own setup and data-sharing decision."
     ],
-    "proof_summary": "The reconciled native suite and clean-wheel deterministic rule decision passed. This release does not establish a speed, savings or quality improvement on another person’s workload.",
+    "proof_summary": "The reconciled native suite and clean-wheel deterministic rule decision passed. This release does not establish a speed, savings or quality improvement on another person\u2019s workload.",
     "next_step": "Inspect one trace, choose one narrow intervention and compare it with an unchanged baseline."
   },
-  "repository_url": "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions",
+  "repository_url": "https://github.com/michaeljabbour/amplifier-capability-fast-decisions",
+  "name": "amplifier-capability-fast-decisions",
+  "legacy_names": [
+    "amplifier-smart-tool-fast-decisions",
+    "amplifier-fast-decisions",
+    "fast-decisions"
+  ],
+  "contract_version": "amplifier-capability/v1",
+  "version": "0.3.0",
+  "version_basis": "Existing release metadata",
+  "engine": "Decision model",
+  "engine_components": {
+    "inspection_replay": "None",
+    "default_routing": "Measured deterministic decision rule R*",
+    "optional_judge": "Decision model",
+    "caller_generation": "External LLM owned by host"
+  },
+  "surfaces": [
+    "agent-skills",
+    "amplifier-bundle",
+    "cli",
+    "python-library"
+  ],
+  "portable_method": {
+    "name": "fast-decisions",
+    "path": "skills/fast-decisions",
+    "include": [
+      "."
+    ],
+    "contract": "Agent Skills directory; caller applies the method; no independent execution loop is installed."
+  },
+  "interfaces": {
+    "portable": {
+      "input": "Caller task and explicitly authorized context",
+      "output": "Measure small agent decisions and use a bounded fast path only where its outcome can be checked.",
+      "failure": "Report insufficient evidence, unsupported context or host limitation; never turn discovery into an execution claim."
+    },
+    "native": {
+      "distribution": "amplifier-smart-tool-fast-decisions",
+      "entrypoints": {
+        "amplifier-fast-decisions": "amplifier_fast_decisions.smart_cli:main",
+        "afast": "amplifier_fast_decisions.cli:main"
+      },
+      "docs": [
+        "docs/CONSOLIDATION.md"
+      ],
+      "status": "Existing declared entrypoints preserved; runtime signatures, service access and installation tests remain separate evidence."
+    },
+    "host_adapters": {
+      "amplifier_bundle": "bundle.md",
+      "grants_autonomy": false
+    }
+  },
+  "permissions": {
+    "installation": {
+      "network": false,
+      "executes_capability_code": false,
+      "writes": [
+        "Selected discovery folders",
+        ".capability-state transaction backups"
+      ],
+      "grants_runtime_permissions": false
+    },
+    "runtime": {
+      "status": "Host/caller authorizes each operation; installation is not a tool allowlist or standing approval.",
+      "declared_boundaries": [
+        "No speed, quality or savings improvement is claimed by packaging or offline replay."
+      ]
+    },
+    "secret_names": {
+      "discovery_requires": [],
+      "native_runtime_inventory": "See native documentation; no credentials are bundled or inferred."
+    }
+  },
+  "dataflow": {
+    "installation": "Read pinned tracked portable source and copy locally with SHA-256 receipts. No source text is transmitted.",
+    "method": "Caller supplies authorized context; existing promise and boundaries govern output.",
+    "native_runtime": "Provider/network/storage flows are owned by native interfaces and host authorization; these files do not enable them."
+  },
+  "source_policy": {
+    "revision": "Explicit full40-character Git commit required at installation; never infer latest.",
+    "repository_rename": "Public identity may change; skill folder, imports, entrypoints, tool IDs and schemas remain stable.",
+    "research": ".research/market remains local and ignored; AGENTS governs refresh."
+  },
   "film": {
     "file": "fast-decisions-film",
     "seconds": 67,
     "heading": "The cheaper ride.",
     "blurb": "In 67 seconds, a cheaper model begs for every job, then needs four trips where the usual one needs one. Fast Decisions makes the call once, before the session starts: it checks the price and the project, prints its reasons, and keeps large projects on your usual model. A prediction is not a bill, so you compare matched runs. Captions are on the player; a transcript is below.",
     "note": "The tasks and prices are a fictional illustration. Savings on your own work are not measured; the film shows how the tool behaves and reports no results."
-  }
+  },
+  "repository_aliases": [
+    "https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions"
+  ]
 }

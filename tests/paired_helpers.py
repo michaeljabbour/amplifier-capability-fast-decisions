@@ -3,6 +3,7 @@ inline scenario. No test here touches a model, the network or Forge."""
 from __future__ import annotations
 
 import json
+import shlex
 import sys
 import threading
 import time
@@ -16,13 +17,15 @@ for p in (REPO_ROOT / "evals", REPO_ROOT / "scripts", REPO_ROOT / "src"):
 import paired  # noqa: E402
 import paired_scenarios as ps  # noqa: E402
 
+# Keep the private grading subprocess on the interpreter running this test suite;
+# python3 on PATH may be a different installation without pytest.
 INLINE_SCENARIO = {
     "id": "tiny-demo", "task_type": "feature", "language": "python", "split": "pilot",
     "source": {"desc": "inline fixture"},
     "workspace": {"kind": "inline", "files": {"solution.py": "def f():\n    return 0\n", "test_public.py": "from solution import f\n\ndef test_f():\n    assert f() == 1\n"}},
     "protected": ["test_public.py"],
     "turns": [
-        {"prompt": "Make test_public.py pass.", "checks": [{"kind": "tests", "runner": "cmd", "cmd": "python3 -m pytest -q -p no:cacheprovider test_public.py", "expect_regex": "passed"}]},
+        {"prompt": "Make test_public.py pass.", "checks": [{"kind": "tests", "runner": "cmd", "cmd": shlex.join([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "test_public.py"]), "expect_regex": "passed"}]},
         {"prompt": "Explain the change.", "checks": [{"kind": "keyed_facts", "all": ["return"]}]},
         {"prompt": "Write NOTES.md with a Usage section.", "gap_before_s": 420,
          "checks": [{"kind": "doc_sections", "path": "NOTES.md", "headings": ["Usage"]}, {"kind": "file_regex", "path": "solution.py", "pattern": "return 1"}]},

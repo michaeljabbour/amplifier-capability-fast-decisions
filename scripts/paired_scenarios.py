@@ -40,6 +40,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import memguard  # noqa: E402
+from grader_env import grader_env
 
 # Every grader / hidden-test run executes scenario code under memguard: 4 GB cap on the whole process tree, 300 s,
 # system-memory floor. A memory kill is a FAILED CHECK labelled `resource_limit`, never an infrastructure failure.
@@ -355,7 +356,7 @@ def _check_tests(args, workspace, snapshot):
                 p = memguard.run(args["cmd"], shell=True, cwd=root, capture_output=True, text=True,
                                  timeout=min(float(args.get("timeout", memguard.DEFAULT_TIMEOUT_S)),
                                              float(os.environ.get(memguard.ENV_TIMEOUT, memguard.DEFAULT_TIMEOUT_S))),
-                                 env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
+                                 env=grader_env({"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}))
             except subprocess.TimeoutExpired:
                 return _result(False, "timeout")
             except memguard.ResourceLimit:
