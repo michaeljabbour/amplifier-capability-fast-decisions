@@ -18,12 +18,12 @@ bundle:
 includes:
   # Pin the package and the loop module to the same reviewed revision; the
   # orchestrator config below needs a module that knows the price gate.
-  - bundle: git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@8e7faf31a8c76ac2c4ac17505762d5d5fb152d87
+  - bundle: git+https://github.com/michaeljabbour/amplifier-capability-fast-decisions@8e7faf31a8c76ac2c4ac17505762d5d5fb152d87
 
 session:
   orchestrator:
     module: loop-fast-decisions
-    source: git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@8e7faf31a8c76ac2c4ac17505762d5d5fb152d87#subdirectory=modules/loop-fast-decisions
+    source: git+https://github.com/michaeljabbour/amplifier-capability-fast-decisions@8e7faf31a8c76ac2c4ac17505762d5d5fb152d87#subdirectory=modules/loop-fast-decisions
     config:
       mode: active
       backend: jev

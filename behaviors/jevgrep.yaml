@@ -5,7 +5,7 @@ bundle:
 
 tools:
   - module: tool-jevgrep
-    source: git+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@main#subdirectory=modules/tool-jevgrep
+    source: git+https://github.com/michaeljabbour/amplifier-capability-fast-decisions@main#subdirectory=modules/tool-jevgrep
     config:
       root: .
       executable: jg

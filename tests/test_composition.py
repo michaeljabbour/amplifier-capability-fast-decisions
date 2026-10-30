@@ -4,7 +4,7 @@ Two independent concerns live here:
 
 1. ``YamlSourceTests`` parses bundle.md / behaviors / bundles YAML directly
    (no amplifier_foundation needed) and checks every module ``source:``
-   points at the supported ``git+https://.../amplifier-smart-tool-fast-decisions@main#subdirectory=modules/<name>``
+   points at the supported ``git+https://.../amplifier-capability-fast-decisions@main#subdirectory=modules/<name>``
    form, with a matching ``modules/<name>/pyproject.toml`` declaring the
    right entry point. This always runs.
 
@@ -31,14 +31,8 @@ ROOT = Path(__file__).resolve().parents[1]
 UNSUPPORTED_PREFIX = "fast-decisions:modules/"
 
 # Files that may declare a module `source:` pointing into modules/.
-COMPOSITION_FILES = [
-    ROOT / "bundle.md",
-    ROOT / "behaviors" / "fast-decisions.yaml",
-    ROOT / "behaviors" / "fast-decisions-shadow.yaml",
-    ROOT / "bundles" / "shadow.yaml",
-    ROOT / "bundles" / "active.yaml",
-    ROOT / "bundles" / "active-routing.yaml",
-]
+COMPOSITION_FILES = [ROOT / "bundle.md", *sorted((ROOT / "behaviors").glob("*.yaml")),
+                     *sorted((ROOT / "bundles").glob("*.yaml"))]
 
 
 def _load_frontmatter(path: Path) -> dict:
@@ -141,7 +135,8 @@ class YamlSourceTests(unittest.TestCase):
         self.assertEqual(tool['config']['backend'], 'jev')
 
     def test_module_sources_use_supported_form_and_resolve(self):
-        checked_any = False
+        local_modules = {p.name for p in (ROOT / "modules").iterdir() if (p / "pyproject.toml").is_file()}
+        checked_modules = set()
         for path in COMPOSITION_FILES:
             data = _load_frontmatter(path)
             for module_name, source in _iter_module_sources(data):
@@ -150,16 +145,17 @@ class YamlSourceTests(unittest.TestCase):
                         f"{path}: module {module_name!r} uses unsupported "
                         f"'{UNSUPPORTED_PREFIX}' source form: {source!r}"
                     )
-                if "amplifier-smart-tool-fast-decisions" not in source:
-                    # Not one of our own modules (e.g. foundation's loop-streaming); skip.
+                if module_name not in local_modules:
+                    # Third-party modules retain their own source identity.
                     continue
-                checked_any = True
+                checked_modules.add(module_name)
                 match = re.fullmatch(
-                    r"git\+https://github\.com/michaeljabbour/amplifier-smart-tool-fast-decisions@"
+                    r"git\+https://github\.com/michaeljabbour/amplifier-capability-fast-decisions@"
                     r"(?:main|[0-9a-f]{40})#subdirectory=modules/([\w-]+)", source,
                 )
                 self.assertIsNotNone(match, f"{path}: unsupported module source {source!r}")
                 mod_dir_name = match.group(1)
+                self.assertEqual(mod_dir_name, module_name, f"{path}: source points at a different module")
                 module_pyproject = ROOT / "modules" / mod_dir_name / "pyproject.toml"
                 self.assertTrue(
                     module_pyproject.is_file(),
@@ -176,9 +172,7 @@ class YamlSourceTests(unittest.TestCase):
                     f"modules/{mod_dir_name}/pyproject.toml does not declare the "
                     f"'{mod_dir_name}' entry point under [project.entry-points.\"amplifier.modules\"]",
                 )
-        self.assertTrue(
-            checked_any, "Expected to find at least one fast-decisions module source"
-        )
+        self.assertEqual(checked_modules, local_modules, "Every local module must have a checked source")
 
 
 class ActiveBundleOfflineTests(unittest.TestCase):
@@ -205,7 +199,7 @@ class ActiveBundleOfflineTests(unittest.TestCase):
         self.assertEqual(routing["price_gate"], {"enabled": True})
         self.assertEqual(len(data["includes"]), 1)
         self.assertRegex(data["includes"][0]["bundle"],
-            r"^git\+https://github.com/michaeljabbour/amplifier-smart-tool-fast-decisions@[0-9a-f]{40}$")
+            r"^git\+https://github.com/michaeljabbour/amplifier-capability-fast-decisions@[0-9a-f]{40}$")
 
 
 class ActiveRoutingBundleOfflineTests(unittest.TestCase):
@@ -329,7 +323,7 @@ class BundleLoadTests(unittest.TestCase):
 
         self.assertRegex(
             orchestrator["source"],
-            r"^git\+https://github\.com/michaeljabbour/amplifier-smart-tool-fast-decisions@"
+            r"^git\+https://github\.com/michaeljabbour/amplifier-capability-fast-decisions@"
             r"(?:main|[0-9a-f]{40})#subdirectory=modules/loop-fast-decisions$",
         )
 
